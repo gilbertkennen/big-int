@@ -52,6 +52,7 @@ module Data.Integer
 import Basics
 import Char
 import Debug
+import List.Extra
 import Maybe exposing (Maybe)
 import Maybe.Extra
 import Result exposing (Result)
@@ -139,28 +140,10 @@ fromStringPrime x =
         Nothing
     else
         List.reverse x
-            |> groups 6
-            |> List.map List.reverse
-            |> List.map String.fromList
-            |> List.map String.toInt
-            |> List.map Result.toMaybe
+            |> List.Extra.greedyGroupsOf 6
+            |> List.map (List.reverse >> String.fromList >> String.toInt >> Result.toMaybe)
             |> Maybe.Extra.combine
             |> Maybe.map Magnitude
-
-
-groups : Int -> List a -> List (List a)
-groups n x =
-    let
-        head =
-            List.take n x
-
-        tail =
-            List.drop n x
-    in
-        if tail == [] then
-            [ head ]
-        else
-            head :: groups n tail
 
 
 type MagnitudePair
