@@ -53,6 +53,7 @@ import Basics
 import Char
 import Debug
 import Maybe exposing (Maybe)
+import Maybe.Extra
 import Result exposing (Result)
 import String
 
@@ -120,28 +121,16 @@ fromString x =
             Just (fromInt 0)
 
         '-' :: xs ->
-            case fromStringPrime xs of
-                Nothing ->
-                    Nothing
-
-                Just a ->
-                    Just (Integer ( Negative, a ))
+            fromStringPrime xs
+                |> Maybe.map (Integer << (,) Negative)
 
         '+' :: xs ->
-            case fromStringPrime xs of
-                Nothing ->
-                    Nothing
-
-                Just a ->
-                    Just (Integer ( Positive, a ))
+            fromStringPrime xs
+                |> Maybe.map (Integer << (,) Positive)
 
         xs ->
-            case fromStringPrime xs of
-                Nothing ->
-                    Nothing
-
-                Just a ->
-                    Just (Integer ( Positive, a ))
+            fromStringPrime xs
+                |> Maybe.map (Integer << (,) Positive)
 
 
 fromStringPrime : List Char -> Maybe Magnitude
@@ -149,58 +138,14 @@ fromStringPrime x =
     if not <| List.all Char.isDigit x then
         Nothing
     else
-        let
-            rev_digits =
-                List.reverse x
-
-            rev_group_digits =
-                groups 6 rev_digits
-
-            group_digits =
-                List.map List.reverse rev_group_digits
-
-            group_strings =
-                List.map String.fromList group_digits
-
-            group_result_ints =
-                List.map String.toInt group_strings
-        in
-            let
-                result_to_maybe x =
-                    case x of
-                        Ok a ->
-                            Just a
-
-                        Err _ ->
-                            Nothing
-            in
-                let
-                    group_maybe_ints =
-                        List.map result_to_maybe group_result_ints
-                in
-                    let
-                        gen_res x =
-                            case x of
-                                [] ->
-                                    Just []
-
-                                Nothing :: xs ->
-                                    Nothing
-
-                                (Just b) :: bx ->
-                                    case gen_res bx of
-                                        Nothing ->
-                                            Nothing
-
-                                        Just xxs ->
-                                            Just (b :: xxs)
-                    in
-                        case gen_res group_maybe_ints of
-                            Just x ->
-                                Just (Magnitude x)
-
-                            Nothing ->
-                                Nothing
+        List.reverse x
+            |> groups 6
+            |> List.map List.reverse
+            |> List.map String.fromList
+            |> List.map String.toInt
+            |> List.map Result.toMaybe
+            |> Maybe.Extra.combine
+            |> Maybe.map Magnitude
 
 
 groups : Int -> List a -> List (List a)
