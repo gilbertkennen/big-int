@@ -30,39 +30,19 @@ module Data.Integer
 
 {-| Infinite digits integers
 # The datatype
-@docs Integer
-@docs Sign
+@docs Integer, Sign
 
 # From/To
-@docs fromInt
-@docs fromString
-@docs `toString
+@docs fromInt, fromString, toString
 
 # Common operations
-@docs add
-@docs sub
-@docs negate
-@docs mul
-@docs divmod
-@docs unsafeDivmod
-@docs abs
-@docs sign
+@docs add, sub, negate, mul, divmod, unsafeDivmod, abs, sign
 
 # Comparison
-@docs compare
-@docs gt
-@docs gte
-@docs lt
-@docs lte
-@docs eq
-@docs neq
-@docs max
-@docs min
+@docs compare, gt, gte, lt, lte, eq, neq, max, min
 
 # Common numbers
-@docs zero
-@docs one
-@docs minusOne
+@docs zero, one, minusOne
 
 # Internals
 @docs max_digit_value
