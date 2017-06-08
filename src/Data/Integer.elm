@@ -30,39 +30,19 @@ module Data.Integer
 
 {-| Infinite digits integers
 # The datatype
-@docs Integer
-@docs Sign
+@docs Integer, Sign
 
 # From/To
-@docs fromInt
-@docs fromString
-@docs `toString
+@docs fromInt, fromString, toString
 
 # Common operations
-@docs add
-@docs sub
-@docs negate
-@docs mul
-@docs divmod
-@docs unsafeDivmod
-@docs abs
-@docs sign
+@docs add, sub, negate, mul, divmod, unsafeDivmod, abs, sign
 
 # Comparison
-@docs compare
-@docs gt
-@docs gte
-@docs lt
-@docs lte
-@docs eq
-@docs neq
-@docs max
-@docs min
+@docs compare, gt, gte, lt, lte, eq, neq, max, min
 
 # Common numbers
-@docs zero
-@docs one
-@docs minusOne
+@docs zero, one, minusOne
 
 # Internals
 @docs max_digit_value
@@ -115,6 +95,10 @@ type IntegerNotNormalised
 max_digit_value : Int
 max_digit_value =
     1000000
+
+
+
+-- The largest root seems to be 94906265, why not this?
 
 
 {-| Makes an Integer from an Int
@@ -184,43 +168,40 @@ fromStringPrime x =
 
             group_result_ints =
                 List.map String.toInt group_strings
-        in
-            let
-                result_to_maybe x =
-                    case x of
-                        Ok a ->
-                            Just a
 
-                        Err _ ->
-                            Nothing
-            in
-                let
-                    group_maybe_ints =
-                        List.map result_to_maybe group_result_ints
-                in
-                    let
-                        gen_res x =
-                            case x of
-                                [] ->
-                                    Just []
+            result_to_maybe x =
+                case x of
+                    Ok a ->
+                        Just a
 
-                                Nothing :: xs ->
-                                    Nothing
+                    Err _ ->
+                        Nothing
 
-                                (Just b) :: bx ->
-                                    case gen_res bx of
-                                        Nothing ->
-                                            Nothing
+            group_maybe_ints =
+                List.map result_to_maybe group_result_ints
 
-                                        Just xxs ->
-                                            Just (b :: xxs)
-                    in
-                        case gen_res group_maybe_ints of
-                            Just x ->
-                                Just (Magnitude x)
+            gen_res x =
+                case x of
+                    [] ->
+                        Just []
 
+                    Nothing :: xs ->
+                        Nothing
+
+                    (Just b) :: bx ->
+                        case gen_res bx of
                             Nothing ->
                                 Nothing
+
+                            Just xxs ->
+                                Just (b :: xxs)
+        in
+            case gen_res group_maybe_ints of
+                Just x ->
+                    Just (Magnitude x)
+
+                Nothing ->
+                    Nothing
 
 
 groups : Int -> List a -> List (List a)
@@ -232,10 +213,7 @@ groups n x =
         tail =
             List.drop n x
     in
-        if tail == [] then
-            [ head ]
-        else
-            head :: groups n tail
+        head :: groups n tail
 
 
 type MagnitudePair
@@ -287,36 +265,33 @@ normalise (IntegerNotNormalised ( sx, x )) =
     let
         nmagnitude =
             normaliseMagnitude x
+
+        is_negative_magnitude (Magnitude x) =
+            case x of
+                [] ->
+                    False
+
+                [ d ] ->
+                    d < 0
+
+                x :: xs ->
+                    is_negative_magnitude (Magnitude xs)
+
+        reverse_magnitude (Magnitude xs) =
+            MagnitudeNotNormalised (List.map (\x -> 0 - x) xs)
+
+        reverse_sign s =
+            case s of
+                Positive ->
+                    Negative
+
+                Negative ->
+                    Positive
     in
-        let
-            is_negative_magnitude (Magnitude x) =
-                case x of
-                    [] ->
-                        False
-
-                    [ d ] ->
-                        d < 0
-
-                    x :: xs ->
-                        is_negative_magnitude (Magnitude xs)
-        in
-            let
-                reverse_magnitude (Magnitude xs) =
-                    MagnitudeNotNormalised (List.map (\x -> 0 - x) xs)
-            in
-                let
-                    reverse_sign s =
-                        case s of
-                            Positive ->
-                                Negative
-
-                            Negative ->
-                                Positive
-                in
-                    if is_negative_magnitude nmagnitude then
-                        normalise (IntegerNotNormalised ( reverse_sign sx, reverse_magnitude nmagnitude ))
-                    else
-                        Integer ( sx, nmagnitude )
+        if is_negative_magnitude nmagnitude then
+            normalise (IntegerNotNormalised ( reverse_sign sx, reverse_magnitude nmagnitude ))
+        else
+            Integer ( sx, nmagnitude )
 
 
 normaliseDigit : Int -> ( Int, Digit )
