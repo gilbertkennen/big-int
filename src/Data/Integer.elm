@@ -186,40 +186,40 @@ greedyZip f =
 
 
 normalise : IntegerNotNormalised -> Integer
-normalise (IntegerNotNormalised ( sx, x )) =
+normalise (IntegerNotNormalised ( sign, x )) =
     let
         nmagnitude =
             normaliseMagnitude x
     in
-        let
-            is_negative_magnitude (Magnitude x) =
-                case x of
-                    [] ->
-                        False
+        if isNegativeMagnitude nmagnitude then
+            normalise (IntegerNotNormalised ( signNegate sign, reverseMagnitude nmagnitude ))
+        else
+            Integer ( sign, nmagnitude )
 
-                    [ d ] ->
-                        d < 0
 
-                    x :: xs ->
-                        is_negative_magnitude (Magnitude xs)
-        in
-            let
-                reverse_magnitude (Magnitude xs) =
-                    MagnitudeNotNormalised (List.map (\x -> 0 - x) xs)
-            in
-                let
-                    reverse_sign s =
-                        case s of
-                            Positive ->
-                                Negative
+reverseMagnitude : Magnitude -> MagnitudeNotNormalised
+reverseMagnitude (Magnitude xs) =
+    MagnitudeNotNormalised (List.map ((*) -1) xs)
 
-                            Negative ->
-                                Positive
-                in
-                    if is_negative_magnitude nmagnitude then
-                        normalise (IntegerNotNormalised ( reverse_sign sx, reverse_magnitude nmagnitude ))
-                    else
-                        Integer ( sx, nmagnitude )
+
+isNegativeMagnitude : Magnitude -> Bool
+isNegativeMagnitude (Magnitude xs) =
+    case List.Extra.last xs of
+        Nothing ->
+            False
+
+        Just x ->
+            x < 0
+
+
+signNegate : Sign -> Sign
+signNegate sign =
+    case sign of
+        Positive ->
+            Negative
+
+        Negative ->
+            Positive
 
 
 normaliseDigit : Int -> ( Int, Digit )
@@ -245,10 +245,7 @@ normaliseDigitList x =
                 ( c, dPrime ) =
                     normaliseDigit d
             in
-                if c /= 0 then
-                    [ dPrime, c ]
-                else
-                    [ dPrime ]
+                [ dPrime, c ]
 
         d :: d2 :: xs ->
             let
@@ -258,40 +255,22 @@ normaliseDigitList x =
                 dPrime :: normaliseDigitList (d2 + c :: xs)
 
 
-dropWhile : (a -> Bool) -> List a -> List a
-dropWhile f x =
-    case x of
-        [] ->
-            []
-
-        a :: xs ->
-            if f a then
-                dropWhile f xs
-            else
-                a :: xs
-
-
 dropZeroes : List Digit -> List Digit
-dropZeroes x =
-    let
-        rev_list =
-            List.reverse x
-
-        no_zeros =
-            dropWhile (\x -> x == 0) rev_list
-    in
-        List.reverse no_zeros
+dropZeroes =
+    List.reverse
+        >> List.Extra.dropWhile ((==) 0)
+        >> List.reverse
 
 
 normaliseMagnitude : MagnitudeNotNormalised -> Magnitude
 normaliseMagnitude (MagnitudeNotNormalised x) =
-    Magnitude (dropZeroes (normaliseDigitList x))
+    Magnitude (x |> normaliseDigitList |> dropZeroes)
 
 
 toPositiveSign : Integer -> IntegerNotNormalised
 toPositiveSign (Integer ( s, Magnitude m )) =
     let
-        reverse_magnitude (Magnitude xs) =
+        reverseMagnitude (Magnitude xs) =
             MagnitudeNotNormalised (List.map (\x -> -x) xs)
     in
         case s of
@@ -299,7 +278,7 @@ toPositiveSign (Integer ( s, Magnitude m )) =
                 IntegerNotNormalised ( s, MagnitudeNotNormalised m )
 
             Negative ->
-                IntegerNotNormalised ( Positive, reverse_magnitude (Magnitude m) )
+                IntegerNotNormalised ( Positive, reverseMagnitude (Magnitude m) )
 
 
 {-| Adds two Integers
