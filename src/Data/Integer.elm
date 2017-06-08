@@ -150,44 +150,39 @@ type MagnitudePair
     = MagnitudePair (List ( Digit, Digit ))
 
 
-sameSize : Magnitude -> Magnitude -> MagnitudePair
-sameSize (Magnitude a) (Magnitude b) =
+sameSizeNormalized : Magnitude -> Magnitude -> MagnitudePair
+sameSizeNormalized (Magnitude xs) (Magnitude ys) =
+    MagnitudePair (sameSizeRaw xs ys)
+
+
+sameSizeNotNormalized : MagnitudeNotNormalised -> MagnitudeNotNormalised -> MagnitudePair
+sameSizeNotNormalized (MagnitudeNotNormalised xs) (MagnitudeNotNormalised ys) =
+    MagnitudePair (sameSizeRaw xs ys)
+
+
+sameSizeRaw : List Int -> List Int -> List ( Int, Int )
+sameSizeRaw =
+    greedyZip (\x y -> ( Maybe.withDefault 0 x, Maybe.withDefault 0 y ))
+
+
+greedyZip : (Maybe a -> Maybe b -> c) -> List a -> List b -> List c
+greedyZip f =
     let
-        sameSizePrime a b =
-            case ( a, b ) of
+        go acc lefts rights =
+            case ( lefts, rights ) of
                 ( [], [] ) ->
-                    []
+                    List.reverse acc
 
-                ( a :: xa, b :: xb ) ->
-                    ( a, b ) :: sameSizePrime xa xb
+                ( x :: xs, [] ) ->
+                    go (f (Just x) Nothing :: acc) xs []
 
-                ( a :: xa, [] ) ->
-                    ( a, 0 ) :: sameSizePrime xa []
+                ( [], y :: ys ) ->
+                    go (f Nothing (Just y) :: acc) [] ys
 
-                ( [], b :: xb ) ->
-                    ( 0, b ) :: sameSizePrime [] xb
+                ( x :: xs, y :: ys ) ->
+                    go (f (Just x) (Just y) :: acc) xs ys
     in
-        MagnitudePair (sameSizePrime a b)
-
-
-sameSizePrime : MagnitudeNotNormalised -> MagnitudeNotNormalised -> MagnitudePair
-sameSizePrime (MagnitudeNotNormalised a) (MagnitudeNotNormalised b) =
-    let
-        sameSizeSecond a b =
-            case ( a, b ) of
-                ( [], [] ) ->
-                    []
-
-                ( a :: xa, b :: xb ) ->
-                    ( a, b ) :: sameSizeSecond xa xb
-
-                ( a :: xa, [] ) ->
-                    ( a, 0 ) :: sameSizeSecond xa []
-
-                ( [], b :: xb ) ->
-                    ( 0, b ) :: sameSizeSecond [] xb
-    in
-        MagnitudePair (sameSizeSecond a b)
+        go []
 
 
 normalise : IntegerNotNormalised -> Integer
@@ -319,7 +314,7 @@ add a b =
             toPositiveSign b
 
         (MagnitudePair p) =
-            sameSizePrime ma mb
+            sameSizeNotNormalized ma mb
 
         added =
             List.map (\( x, y ) -> x + y) p
@@ -436,7 +431,7 @@ compare (Integer ( sa, a )) (Integer ( sb, b )) =
             _ ->
                 let
                     ss =
-                        sameSize a b
+                        sameSizeNormalized a b
 
                     rss =
                         reverseMagnitudePair ss
