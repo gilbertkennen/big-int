@@ -167,7 +167,15 @@ fromString_ x =
             |> List.Extra.greedyGroupsOf maxDigitMagnitude
             |> List.map (List.reverse >> String.fromList >> String.toInt >> Result.toMaybe)
             |> Maybe.Extra.combine
-            |> Maybe.map Magnitude
+            |> Maybe.map
+                (\xs ->
+                    case xs of
+                        [ 0 ] ->
+                            Magnitude []
+
+                        _ ->
+                            Magnitude xs
+                )
 
 
 type MagnitudePair
