@@ -122,7 +122,7 @@ type IntegerNotNormalised
 -}
 maxDigitValue : Int
 maxDigitValue =
-    10 ^ maxDigitMagnitude
+    1000000
 
 
 maxDigitMagnitude : Int
@@ -336,7 +336,7 @@ sub a b =
 -}
 mul : Integer -> Integer -> Integer
 mul (Integer ( sign1, m1 )) (Integer ( sign2, m2 )) =
-    Integer ( signProduct sign1 sign2, (mulMagnitudes m1 m2) )
+    Integer ( signProduct sign1 sign2, mulMagnitudes m1 m2 )
 
 
 mulMagnitudes : Magnitude -> Magnitude -> Magnitude
@@ -345,7 +345,7 @@ mulMagnitudes (Magnitude m1) (Magnitude m2) =
         [] ->
             Magnitude []
 
-        [ m ] ->
+        m :: [] ->
             mulSingleDigit (Magnitude m2) m
 
         m :: mx ->
@@ -365,8 +365,8 @@ mulMagnitudes (Magnitude m1) (Magnitude m2) =
 
 
 mulSingleDigit : Magnitude -> Digit -> Magnitude
-mulSingleDigit (Magnitude m) d =
-    m
+mulSingleDigit (Magnitude xs) d =
+    xs
         |> List.map ((*) d)
         |> MagnitudeNotNormalised
         |> normaliseMagnitude
