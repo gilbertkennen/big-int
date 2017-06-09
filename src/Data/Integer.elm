@@ -112,11 +112,11 @@ type IntegerNotNormalised
     = IntegerNotNormalised ( Sign, MagnitudeNotNormalised )
 
 
-{-| Enough to hold digit * digit without overflowing to double.
+{-| Six base-10 digits is the most we can have where x * x < the JS integer limit.
 -}
 maxDigitValue : Int
 maxDigitValue =
-    1000000
+    -1 + 10 ^ maxDigitMagnitude
 
 
 maxDigitMagnitude : Int
