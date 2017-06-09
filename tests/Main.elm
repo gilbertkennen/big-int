@@ -3,24 +3,24 @@ module Main exposing (..)
 import Data.Integer exposing (..)
 import Expect
 import Fuzz exposing (Fuzzer, conditional, int, tuple)
+import String
 import Test exposing (..)
 import Maybe exposing (Maybe)
 
 
 integer : Fuzzer Integer
 integer =
-    int |> Fuzz.map fromInt
+    Fuzz.map2 mul (Fuzz.map fromInt int) (Fuzz.map fromInt int)
 
 
 nonZeroInteger : Fuzzer Integer
 nonZeroInteger =
-    conditional { retries = 16, fallback = (+) 1, condition = (/=) 0 } int
-        |> Fuzz.map fromInt
+    conditional { retries = 16, fallback = add one, condition = not << eq zero } integer
 
 
 smallInt : Fuzzer Int
 smallInt =
-    conditional { retries = 16, fallback = always 0, condition = (>=) maxDigitValue << Basics.abs } int
+    conditional { retries = 16, fallback = always 0, condition = (>=) 1000000 << Basics.abs } int
 
 
 addTests : Test
@@ -30,6 +30,11 @@ addTests =
             \( x, y ) ->
                 add (fromInt x) (fromInt y)
                     |> Expect.equal (fromInt (x + y))
+        , fuzz (tuple ( integer, integer )) "x + y + (-y) = x" <|
+            \( x, y ) ->
+                add x y
+                    |> add (Data.Integer.negate y)
+                    |> Expect.equal x
         , fuzz (tuple ( integer, integer )) "a + b = b + a" <|
             \( a, b ) -> Expect.equal (add a b) (add b a)
         ]
@@ -83,67 +88,47 @@ mulTests =
             \( x, y ) ->
                 mul (fromInt x) (fromInt y)
                     |> Expect.equal (fromInt (x * y))
-        , fuzz (tuple ( integer, integer )) "Conmutative multiplication" <|
+        , fuzz (tuple ( integer, nonZeroInteger )) "(x * y) / y = x" <|
+            \( x, y ) ->
+                mul x y
+                    |> (\n -> divmod n y)
+                    |> Expect.equal (Just ( x, zero ))
+        , fuzz (tuple ( integer, integer )) "Commutative multiplication" <|
             \( a, b ) -> Expect.equal (mul a b) (mul b a)
         ]
 
 
 divmodTests : Test
 divmodTests =
-    describe "divmod testsuite"
-        [ test "divmod 2000000001 2 = Just (1000000000, 1)" <|
-            \_ ->
-                Expect.equal
-                    (divmod (fromInt 2000000001) (fromInt 2))
-                    (Just ( fromInt 1000000000, fromInt 1 ))
-        , test "divmod 2000000002 2 = Just (1000000001, 0)" <|
-            \_ ->
-                Expect.equal
-                    (divmod (fromInt 2000000002) (fromInt 2))
-                    (Just ( fromInt 1000000001, fromInt 0 ))
-        , test "divmod 20 0 == Nothing" <|
-            \_ ->
-                Expect.equal
-                    (divmod (fromInt 20) (fromInt 0))
-                    Nothing
+    describe "divmod"
+        [ fuzz (tuple ( integer, nonZeroInteger )) "definition" <|
+            \( x, y ) ->
+                case divmod x y of
+                    Nothing ->
+                        Expect.equal y (fromInt 0)
+
+                    Just ( c, r ) ->
+                        add (mul c y) r
+                            |> Expect.equal x
         ]
 
 
-qcDivMod : Test
-qcDivMod =
-    describe "Quickcheck divmod"
-        [ fuzz (tuple ( integer, nonZeroInteger ))
-            "divmod definition"
-          <|
-            \( a, b ) ->
-                let
-                    ( c, r ) =
-                        unsafeDivmod a b
-                in
-                    add (mul c b) r
-                        |> Expect.equal a
-        ]
-
-
-qcAbs : Test
-qcAbs =
-    describe "Quickcheck abs"
-        [ fuzz integer "abs is always positive" <|
-            \a ->
-                Expect.true "Expected |x| >= 0" (gte (Data.Integer.abs a) (fromInt 0))
-        , fuzz integer "abs definition" <|
+absTests : Test
+absTests =
+    describe "abs"
+        [ fuzz integer "|x| = x; x >= 0 and |x| = -x; x < 0" <|
             \a ->
                 if gte a (fromInt 0) then
-                    Expect.true "Expected |x| = x; x >= 0" (eq (Data.Integer.abs a) a)
+                    Expect.equal (Data.Integer.abs a) a
                 else
-                    Expect.true "Expected |x| = -x; x < 0" (eq (Data.Integer.abs a) (Data.Integer.negate a))
+                    Expect.equal (Data.Integer.abs a) (Data.Integer.negate a)
         ]
 
 
-qcSign : Test
-qcSign =
-    describe "Quickcheck sign"
-        [ fuzz integer "sign definition" <|
+signTests : Test
+signTests =
+    describe "sign"
+        [ fuzz integer "sign x = Positive: x >=0 and sign x = Negative: x < 0" <|
             \a ->
                 if gte a zero then
                     Expect.equal (sign a) Positive
@@ -152,86 +137,79 @@ qcSign =
         ]
 
 
-toStringTests : Test
-toStringTests =
-    describe "toString testsuite"
-        [ test "toString 3345 = \"3345\"" <|
-            \_ -> Expect.equal (Data.Integer.toString (fromInt 3345)) "3345"
-        , test "toString -3345 = \"-3345\"" <|
-            \_ -> Expect.equal (Data.Integer.toString (fromInt (-3345))) "-3345"
+stringTests : Test
+stringTests =
+    describe "toString and fromString"
+        [ fuzz integer "fromString (toString x) = Just x" <|
+            \x ->
+                fromString (Data.Integer.toString x)
+                    |> Expect.equal (Just x)
+        , fuzz smallInt "match string formatting from core" <|
+            \x ->
+                Data.Integer.toString (fromInt x)
+                    |> Expect.equal (Basics.toString x)
+        , fuzz integer "accept '+' at the beginning of the string" <|
+            \x ->
+                let
+                    y =
+                        x
+                            |> Data.Integer.abs
+                            |> Data.Integer.toString
+                in
+                    String.cons '+' y
+                        |> fromString
+                        |> Expect.equal (fromString y)
         ]
 
 
-fromStringTests : Test
-fromStringTests =
-    describe "fromString testsuite"
-        [ test "fromString \"1\" = Just 1" <| \_ -> Expect.equal (Just (fromInt 1)) (fromString "1")
-        , test "fromString \"-1\" = Just -1" <| \_ -> Expect.equal (Just (fromInt -1)) (fromString "-1")
-        , test "fromString \"a\" = Nothing" <| \_ -> Expect.equal (fromString "-a") Nothing
-        , test "fromString \"1234567890\" = Just 1234567890" <|
-            \_ -> Expect.equal (fromString "1234567890") (Just (fromInt 1234567890))
-        , test "fromString \"+1234567890\" = 1234567890" <|
-            \_ -> Expect.equal (fromString "+1234567890") (Just (fromInt 1234567890))
+minTests : Test
+minTests =
+    describe "min"
+        [ fuzz (tuple ( integer, integer )) "min x y = x; x <= y and min x y = y; x > y" <|
+            \( x, y ) ->
+                case Data.Integer.compare x y of
+                    GT ->
+                        Expect.equal (Data.Integer.min x y) y
+
+                    _ ->
+                        Expect.equal (Data.Integer.min x y) x
         ]
 
 
-minMaxTests : Test
-minMaxTests =
-    describe "min-max testsuite"
-        [ test "max 1234567890 3 = 1234567890" <|
-            \_ ->
-                Expect.equal (Data.Integer.max (fromInt 1234567890) (fromInt 3)) (fromInt 1234567890)
-        , test "max 1 3 = 3" <| \_ -> Expect.equal (Data.Integer.max (fromInt 1) (fromInt 3)) (fromInt 3)
-        , test "min 1234567890 3 = 3" <|
-            \_ -> Expect.equal (Data.Integer.min (fromInt 1234567890) (fromInt 3)) (fromInt 3)
-        , test "min 1 3 = 1" <| \_ -> Expect.equal (Data.Integer.min (fromInt 1) (fromInt 3)) (fromInt 1)
-        ]
+maxTests : Test
+maxTests =
+    describe "max"
+        [ fuzz (tuple ( integer, integer )) "min x y = y; x <= y and min x y = x; x > y" <|
+            \( x, y ) ->
+                case Data.Integer.compare x y of
+                    LT ->
+                        Expect.equal (Data.Integer.max x y) y
 
-
-maxDigitValueTests : Test
-maxDigitValueTests =
-    describe "maxDigitValue testsuite"
-        [ test "maxDigitValue ^ 2 /= 1 + maxDigitValue ^ 2" <|
-            \_ ->
-                Expect.notEqual (maxDigitValue * maxDigitValue) ((maxDigitValue * maxDigitValue) + 1)
+                    _ ->
+                        Expect.equal (Data.Integer.max x y) x
         ]
 
 
 compareTests : Test
 compareTests =
-    describe "compare testsuite"
-        [ test "compare 1234567890 3 = GT" <|
-            \_ -> Expect.equal (Data.Integer.compare (fromInt 1234567890) (fromInt 3)) GT
-        , test "compare 3 3 = EQ" <|
-            \_ -> Expect.equal (Data.Integer.compare (fromInt 3) (fromInt 3)) EQ
-        , test "compare 1 3 = LT" <|
-            \_ -> Expect.equal (Data.Integer.compare (fromInt 1) (fromInt 3)) LT
-        , test "1234567890 > 3" <|
-            \_ -> Expect.equal (gt (fromInt 1234567890) (fromInt 3)) True
-        , test "not ( 3 > 3 )" <|
-            \_ -> Expect.equal (gt (fromInt 3) (fromInt 3)) False
-        , test "not ( 1 > 3 )" <|
-            \_ -> Expect.equal (gt (fromInt 1) (fromInt 3)) False
-        , test "1234567890 >= 3" <|
-            \_ -> Expect.equal (gte (fromInt 1234567890) (fromInt 3)) True
-        , test "3 >= 3" <|
-            \_ -> Expect.equal (gte (fromInt 3) (fromInt 3)) True
-        , test "not ( 1 >= 3 )" <|
-            \_ -> Expect.equal (gte (fromInt 1) (fromInt 3)) False
-        , test "not ( 1234567890 = 3 )" <|
-            \_ -> Expect.equal (eq (fromInt 1234567890) (fromInt 3)) False
-        , test "3 = 3" <|
-            \_ -> Expect.equal (eq (fromInt 3) (fromInt 3)) True
-        , test "not ( 1234567890 < 3 )" <|
-            \_ -> Expect.equal (lt (fromInt 1234567890) (fromInt 3)) False
-        , test "not ( 3 < 3 )" <|
-            \_ -> Expect.equal (lt (fromInt 3) (fromInt 3)) False
-        , test "1 < 3" <|
-            \_ -> Expect.equal (lt (fromInt 1) (fromInt 3)) True
-        , test "not ( 1234567890 <= 3 )" <|
-            \_ -> Expect.equal (lte (fromInt 1234567890) (fromInt 3)) False
-        , test "3 <= 3" <|
-            \_ -> Expect.equal (lte (fromInt 3) (fromInt 3)) True
-        , test "1 <= 3" <|
-            \_ -> Expect.equal (lte (fromInt 1) (fromInt 3)) True
+    describe "compare"
+        [ fuzz integer "x = x" <|
+            \x ->
+                Expect.true "apparently x /= x" (eq x x)
+        , fuzz (tuple ( integer, integer )) "x <= x + y; y >= 0" <|
+            \( x, y ) ->
+                Expect.true "apparently !(x <= x + y); y >= 0"
+                    (lte x (add x (Data.Integer.abs y)))
+        , fuzz (tuple ( integer, integer )) "x >= x + y; y <= 0" <|
+            \( x, y ) ->
+                Expect.true "apparently !(x >= x + y); y <= 0"
+                    (gte x (add x (Data.Integer.abs y |> Data.Integer.negate)))
+        , fuzz (tuple ( integer, nonZeroInteger )) "x < x + y; y > 0" <|
+            \( x, y ) ->
+                Expect.true "apparently !(x < x + y); y > 0"
+                    (lt x (add x (Data.Integer.abs y)))
+        , fuzz (tuple ( integer, nonZeroInteger )) "x > x + y; y < 0" <|
+            \( x, y ) ->
+                Expect.true "apparently !(x > x + y); y < 0"
+                    (gt x (add x (Data.Integer.abs y |> Data.Integer.negate)))
         ]
