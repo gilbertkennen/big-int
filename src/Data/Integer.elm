@@ -119,8 +119,6 @@ type IntegerNotNormalised
 
 
 {-| Enough to hold digit * digit without overflowing to double.
-
-Base 10 to make stringification easier.
 -}
 maxDigitValue : Int
 maxDigitValue =
