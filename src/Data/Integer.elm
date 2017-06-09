@@ -43,9 +43,6 @@ module Data.Integer
 # Common numbers
 @docs zero, one, minusOne
 
-# Internals
-@docs maxDigitValue
-
 -}
 
 import Basics
@@ -166,15 +163,17 @@ fromString_ x =
             |> List.Extra.greedyGroupsOf maxDigitMagnitude
             |> List.map (List.reverse >> String.fromList >> String.toInt >> Result.toMaybe)
             |> Maybe.Extra.combine
-            |> Maybe.map
-                (\xs ->
-                    case xs of
-                        [ 0 ] ->
-                            Magnitude []
+            |> Maybe.map (emptyZero << Magnitude)
 
-                        _ ->
-                            Magnitude xs
-                )
+
+emptyZero : Magnitude -> Magnitude
+emptyZero (Magnitude xs) =
+    case List.Extra.dropWhile ((==) 0) xs of
+        [] ->
+            Magnitude []
+
+        _ ->
+            Magnitude xs
 
 
 type MagnitudePair
