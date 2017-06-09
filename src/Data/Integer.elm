@@ -3,7 +3,6 @@ module Data.Integer
         ( Integer
         , Sign(Positive, Negative)
         , sign
-        , maxDigitValue
         , fromInt
         , fromString
         , toString
