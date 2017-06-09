@@ -78,30 +78,12 @@ subTests =
 
 mulTests : Test
 mulTests =
-    let
-        six =
-            fromInt 6
-
-        two =
-            fromInt 2
-
-        three =
-            fromInt 3
-    in
-        describe "Mul testsuite"
-            [ test "3 * 2 = 6" <| \_ -> Expect.equal (mul three two) six
-            , test "3 * -2 = -6" <| \_ -> Expect.equal (mul three (Data.Integer.negate two)) (Data.Integer.negate six)
-            , fuzz (tuple ( smallInt, smallInt )) "mult x y = x * y for small numbers" <|
-                \( x, y ) ->
-                    mul (fromInt x) (fromInt y)
-                        |> Expect.equal (fromInt (x * y))
-            ]
-
-
-qcMul : Test
-qcMul =
-    describe "Quickcheck Mul"
-        [ fuzz (tuple ( integer, integer )) "Conmutative multiplication" <|
+    describe "Mul testsuite"
+        [ fuzz (tuple ( smallInt, smallInt )) "mult x y = x * y for small numbers" <|
+            \( x, y ) ->
+                mul (fromInt x) (fromInt y)
+                    |> Expect.equal (fromInt (x * y))
+        , fuzz (tuple ( integer, integer )) "Conmutative multiplication" <|
             \( a, b ) -> Expect.equal (mul a b) (mul b a)
         ]
 

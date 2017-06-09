@@ -134,7 +134,7 @@ maxDigitMagnitude =
 -}
 fromInt : Int -> Integer
 fromInt x =
-    normalise <| IntegerNotNormalised ( signFromInt x, MagnitudeNotNormalised [ Basics.abs x ] )
+    (normalise <| IntegerNotNormalised ( signFromInt x, MagnitudeNotNormalised [ Basics.abs x ] ))
 
 
 {-| Makes an Integer from a String
@@ -336,7 +336,12 @@ sub a b =
 -}
 mul : Integer -> Integer -> Integer
 mul (Integer ( sign1, m1 )) (Integer ( sign2, m2 )) =
-    Integer ( signProduct sign1 sign2, mulMagnitudes m1 m2 )
+    case mulMagnitudes m1 m2 of
+        Magnitude [] ->
+            Integer ( Positive, Magnitude [] )
+
+        magnitude ->
+            Integer ( signProduct sign1 sign2, magnitude )
 
 
 mulMagnitudes : Magnitude -> Magnitude -> Magnitude
