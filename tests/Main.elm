@@ -18,44 +18,45 @@ nonZeroInteger =
         |> Fuzz.map fromInt
 
 
+smallInt : Fuzzer Int
+smallInt =
+    conditional { retries = 16, fallback = always 0, condition = (>=) maxDigitValue << Basics.abs } int
+
+
 addTests : Test
 addTests =
-    let
-        one =
-            fromInt 1
-
-        two =
-            fromInt 2
-
-        three =
-            fromInt 3
-    in
-        test "Add testsuite" <|
-            \_ -> Expect.equal (add one two) three
-
-
-qcAdd : Test
-qcAdd =
-    describe "Quickcheck Add"
-        [ fuzz (tuple ( integer, integer )) "Commutative adding" <|
+    describe "addition"
+        [ fuzz (tuple ( smallInt, smallInt )) "add x y = x + y for small numbers" <|
+            \( x, y ) ->
+                add (fromInt x) (fromInt y)
+                    |> Expect.equal (fromInt (x + y))
+        , fuzz (tuple ( integer, integer )) "a + b = b + a" <|
             \( a, b ) -> Expect.equal (add a b) (add b a)
         ]
 
 
 negateTests : Test
 negateTests =
-    describe "negate testsuite"
-        [ test "-(1) = -1" <|
-            \_ -> Expect.equal (Data.Integer.negate (fromInt 1)) (fromInt -1)
-        , test "-(-1) = 1" <|
-            \_ -> Expect.equal (Data.Integer.negate (fromInt -1)) (fromInt 1)
-        ]
-
-
-qcNegate : Test
-qcNegate =
-    describe "Quickcheck Negate"
-        [ fuzz integer "Double negate is noop" <|
+    describe "negate"
+        [ fuzz int "negate x = -x; x >= 0" <|
+            \x ->
+                let
+                    y =
+                        Basics.abs x
+                in
+                    fromInt y
+                        |> Data.Integer.negate
+                        |> Expect.equal (fromInt (-1 * y))
+        , fuzz int "negate (-x) = x; x >= 0" <|
+            \x ->
+                let
+                    y =
+                        Basics.abs x * -1
+                in
+                    fromInt y
+                        |> Data.Integer.negate
+                        |> Expect.equal (fromInt (-1 * y))
+        , fuzz integer "negate (negate x) = x" <|
             \a ->
                 a
                     |> Data.Integer.negate
@@ -66,24 +67,11 @@ qcNegate =
 
 subTests : Test
 subTests =
-    let
-        one =
-            fromInt 1
-
-        two =
-            fromInt 2
-
-        three =
-            fromInt 3
-    in
-        describe "Sub testsuite"
-            [ test "3 - 2 = 1" <| \_ -> Expect.equal (sub three two) one ]
-
-
-qcSub : Test
-qcSub =
-    describe "Quickcheck Sub"
-        [ fuzz (tuple ( integer, integer )) "Conmutative substract" <|
+    describe "subtraction"
+        [ fuzz (tuple ( integer, integer )) "x - y = x + -y" <|
+            \( x, y ) ->
+                Expect.equal (sub x y) (add x (Data.Integer.negate y))
+        , fuzz (tuple ( integer, integer )) "a - b = -(b - a)" <|
             \( a, b ) -> Expect.equal (sub a b) (Data.Integer.negate (sub b a))
         ]
 
@@ -103,6 +91,10 @@ mulTests =
         describe "Mul testsuite"
             [ test "3 * 2 = 6" <| \_ -> Expect.equal (mul three two) six
             , test "3 * -2 = -6" <| \_ -> Expect.equal (mul three (Data.Integer.negate two)) (Data.Integer.negate six)
+            , fuzz (tuple ( smallInt, smallInt )) "mult x y = x * y for small numbers" <|
+                \( x, y ) ->
+                    mul (fromInt x) (fromInt y)
+                        |> Expect.equal (fromInt (x * y))
             ]
 
 
