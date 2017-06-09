@@ -344,12 +344,18 @@ sub a b =
 -}
 mul : Integer -> Integer -> Integer
 mul (Integer ( sign1, m1 )) (Integer ( sign2, m2 )) =
-    case mulMagnitudes m1 m2 of
-        Magnitude [] ->
+    Integer ( signProduct sign1 sign2, mulMagnitudes m1 m2 )
+        |> positiveZero
+
+
+positiveZero : Integer -> Integer
+positiveZero ((Integer ( _, Magnitude xs )) as int) =
+    case xs of
+        [] ->
             Integer ( Positive, Magnitude [] )
 
-        magnitude ->
-            Integer ( signProduct sign1 sign2, magnitude )
+        _ ->
+            int
 
 
 mulMagnitudes : Magnitude -> Magnitude -> Magnitude
@@ -677,7 +683,10 @@ divmod a b =
             ( Integer ( _, d ), Integer ( _, m ) ) =
                 divMod_ (Basics.max 0 cand_l) (abs a) (abs b)
         in
-            Just ( Integer ( sign, d ), Integer ( s1, m ) )
+            Just
+                ( Integer ( sign, d ) |> positiveZero
+                , Integer ( s1, m ) |> positiveZero
+                )
 
 
 {-| divmod that returns the pair of values, or crashes if the divisor is zero
