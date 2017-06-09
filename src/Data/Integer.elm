@@ -27,16 +27,32 @@ module Data.Integer
         )
 
 {-| Infinite digits integers
+
+
 # The datatype
+
 @docs Integer, Sign
+
+
 # From/To
+
 @docs fromInt, fromString, toString
+
+
 # Common operations
+
 @docs add, sub, negate, mul, divmod, abs, sign
+
+
 # Comparison
+
 @docs compare, gt, gte, lt, lte, eq, neq, max, min
+
+
 # Common numbers
+
 @docs zero, one, minusOne
+
 -}
 
 import Basics
