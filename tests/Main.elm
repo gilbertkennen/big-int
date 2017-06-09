@@ -8,14 +8,24 @@ import Test exposing (..)
 import Maybe exposing (Maybe)
 
 
+singleInteger : Fuzzer Integer
+singleInteger =
+    Fuzz.map fromInt int
+
+
 integer : Fuzzer Integer
 integer =
-    Fuzz.map2 mul (Fuzz.map fromInt int) (Fuzz.map fromInt int)
+    Fuzz.map2 mul singleInteger singleInteger
+
+
+singleNonZeroInteger : Fuzzer Integer
+singleNonZeroInteger =
+    conditional { retries = 16, fallback = add one, condition = not << eq zero } singleInteger
 
 
 nonZeroInteger : Fuzzer Integer
 nonZeroInteger =
-    conditional { retries = 16, fallback = add one, condition = not << eq zero } integer
+    Fuzz.map2 mul singleNonZeroInteger singleNonZeroInteger
 
 
 smallInt : Fuzzer Int
