@@ -11,7 +11,6 @@ module Data.Integer
         , negate
         , mul
         , divmod
-        , unsafeDivmod
         , abs
         , compare
         , gt
@@ -35,7 +34,7 @@ module Data.Integer
 @docs fromInt, fromString, toString
 
 # Common operations
-@docs add, sub, negate, mul, divmod, unsafeDivmod, abs, sign
+@docs add, sub, negate, mul, divmod, abs, sign
 
 # Comparison
 @docs compare, gt, gte, lt, lte, eq, neq, max, min
@@ -47,7 +46,6 @@ module Data.Integer
 
 import Basics
 import Char
-import Debug
 import List.Extra
 import Maybe exposing (Maybe)
 import Maybe.Extra
@@ -685,18 +683,6 @@ divmod a b =
                 ( Integer ( sign, d ) |> positiveZero
                 , Integer ( s1, m ) |> positiveZero
                 )
-
-
-{-| divmod that returns the pair of values, or crashes if the divisor is zero
--}
-unsafeDivmod : Integer -> Integer -> ( Integer, Integer )
-unsafeDivmod a b =
-    case divmod a b of
-        Just r ->
-            r
-
-        Nothing ->
-            Debug.crash "Divide by zero"
 
 
 {-| Get the sign of the integer
