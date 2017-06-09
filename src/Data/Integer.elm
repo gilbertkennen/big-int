@@ -3,7 +3,7 @@ module Data.Integer
         ( Integer
         , Sign(Positive, Negative)
         , sign
-        , max_digit_value
+        , maxDigitValue
         , fromInt
         , fromString
         , toString
@@ -45,7 +45,7 @@ module Data.Integer
 @docs zero, one, minusOne
 
 # Internals
-@docs max_digit_value
+@docs maxDigitValue
 
 -}
 
@@ -94,9 +94,14 @@ type IntegerNotNormalised
 
 {-| Enough to hold digit * digit without overflowing to double
 -}
-max_digit_value : Int
-max_digit_value =
-    1000000
+maxDigitValue : Int
+maxDigitValue =
+    10 ^ maxDigitMagnitude
+
+
+maxDigitMagnitude : Int
+maxDigitMagnitude =
+    6
 
 
 {-| Makes an Integer from an Int
@@ -122,25 +127,25 @@ fromString x =
             Just (fromInt 0)
 
         '-' :: xs ->
-            fromStringPrime xs
+            fromString_ xs
                 |> Maybe.map (Integer << (,) Negative)
 
         '+' :: xs ->
-            fromStringPrime xs
+            fromString_ xs
                 |> Maybe.map (Integer << (,) Positive)
 
         xs ->
-            fromStringPrime xs
+            fromString_ xs
                 |> Maybe.map (Integer << (,) Positive)
 
 
-fromStringPrime : List Char -> Maybe Magnitude
-fromStringPrime x =
+fromString_ : List Char -> Maybe Magnitude
+fromString_ x =
     if not <| List.all Char.isDigit x then
         Nothing
     else
         List.reverse x
-            |> List.Extra.greedyGroupsOf 6
+            |> List.Extra.greedyGroupsOf maxDigitMagnitude
             |> List.map (List.reverse >> String.fromList >> String.toInt >> Result.toMaybe)
             |> Maybe.Extra.combine
             |> Maybe.map Magnitude
@@ -227,11 +232,11 @@ normaliseDigit d =
     if d < 0 then
         let
             ( carry, dPrime ) =
-                normaliseDigit (d + max_digit_value)
+                normaliseDigit (d + maxDigitValue)
         in
             ( carry - 1, dPrime )
     else
-        ( d // max_digit_value, rem d max_digit_value )
+        ( d // maxDigitValue, rem d maxDigitValue )
 
 
 normaliseDigitList : List Int -> List Digit
@@ -263,22 +268,18 @@ dropZeroes =
 
 
 normaliseMagnitude : MagnitudeNotNormalised -> Magnitude
-normaliseMagnitude (MagnitudeNotNormalised x) =
-    Magnitude (x |> normaliseDigitList |> dropZeroes)
+normaliseMagnitude (MagnitudeNotNormalised xs) =
+    Magnitude (xs |> normaliseDigitList |> dropZeroes)
 
 
 toPositiveSign : Integer -> IntegerNotNormalised
-toPositiveSign (Integer ( s, Magnitude m )) =
-    let
-        reverseMagnitude (Magnitude xs) =
-            MagnitudeNotNormalised (List.map (\x -> -x) xs)
-    in
-        case s of
-            Positive ->
-                IntegerNotNormalised ( s, MagnitudeNotNormalised m )
+toPositiveSign (Integer ( sign, Magnitude xs )) =
+    case sign of
+        Positive ->
+            IntegerNotNormalised ( Positive, MagnitudeNotNormalised xs )
 
-            Negative ->
-                IntegerNotNormalised ( Positive, reverseMagnitude (Magnitude m) )
+        Negative ->
+            IntegerNotNormalised ( Positive, reverseMagnitude (Magnitude xs) )
 
 
 {-| Adds two Integers
@@ -304,17 +305,8 @@ add a b =
 {-| Changes the sign of an Integer
 -}
 negate : Integer -> Integer
-negate (Integer ( s, m )) =
-    let
-        newsign =
-            case s of
-                Positive ->
-                    Negative
-
-                Negative ->
-                    Positive
-    in
-        normalise (toPositiveSign (Integer ( newsign, m )))
+negate (Integer ( sign, xs )) =
+    normalise (toPositiveSign (Integer ( signNegate sign, xs )))
 
 
 {-| Absolute value
@@ -334,94 +326,78 @@ sub a b =
 {-| Multiplies two Integers
 -}
 mul : Integer -> Integer -> Integer
-mul (Integer ( s1, m1 )) (Integer ( s2, m2 )) =
-    let
-        sign =
-            case ( s1, s2 ) of
-                ( Positive, Positive ) ->
-                    Positive
-
-                ( Negative, Negative ) ->
-                    Positive
-
-                _ ->
-                    Negative
-    in
-        Integer ( sign, (mul_magnitudes m1 m2) )
+mul (Integer ( sign1, m1 )) (Integer ( sign2, m2 )) =
+    Integer ( signProduct sign1 sign2, (mulMagnitudes m1 m2) )
 
 
-mul_magnitudes : Magnitude -> Magnitude -> Magnitude
-mul_magnitudes (Magnitude m1) (Magnitude m2) =
+mulMagnitudes : Magnitude -> Magnitude -> Magnitude
+mulMagnitudes (Magnitude m1) (Magnitude m2) =
     case m1 of
         [] ->
             Magnitude []
 
         [ m ] ->
-            mul_single_digit (Magnitude m2) m
+            mulSingleDigit (Magnitude m2) m
 
         m :: mx ->
             let
                 accum =
-                    mul_single_digit (Magnitude m2) m
+                    mulSingleDigit (Magnitude m2) m
 
                 (Magnitude rest) =
-                    mul_magnitudes (Magnitude mx) (Magnitude m2)
-
-                i1 =
-                    (Integer ( Positive, accum ))
-
-                i2 =
-                    (Integer ( Positive, (Magnitude (0 :: rest)) ))
+                    mulMagnitudes (Magnitude mx) (Magnitude m2)
 
                 (Integer ( _, result )) =
-                    add i1 i2
+                    add
+                        (Integer ( Positive, accum ))
+                        (Integer ( Positive, (Magnitude (0 :: rest)) ))
             in
                 result
 
 
-mul_single_digit : Magnitude -> Digit -> Magnitude
-mul_single_digit (Magnitude m) d =
-    normaliseMagnitude (MagnitudeNotNormalised (List.map (\x -> d * x) m))
+mulSingleDigit : Magnitude -> Digit -> Magnitude
+mulSingleDigit (Magnitude m) d =
+    m
+        |> List.map ((*) d)
+        |> MagnitudeNotNormalised
+        |> normaliseMagnitude
 
 
 {-| Compares two Integers
 -}
 compare : Integer -> Integer -> Order
 compare (Integer ( sa, a )) (Integer ( sb, b )) =
-    let
-        invert_order x =
-            case x of
-                LT ->
-                    GT
+    case ( sa, sb ) of
+        ( Positive, Negative ) ->
+            GT
 
-                EQ ->
-                    EQ
+        ( Negative, Positive ) ->
+            LT
 
-                GT ->
-                    LT
-    in
-        case ( sa, sb ) of
-            ( Positive, Negative ) ->
-                GT
+        _ ->
+            let
+                cr =
+                    sameSizeNormalized a b
+                        |> reverseMagnitudePair
+                        |> compareMagnitude
+            in
+                if sa == Positive then
+                    cr
+                else
+                    orderNegate cr
 
-            ( Negative, Positive ) ->
-                LT
 
-            _ ->
-                let
-                    ss =
-                        sameSizeNormalized a b
+orderNegate : Order -> Order
+orderNegate x =
+    case x of
+        LT ->
+            GT
 
-                    rss =
-                        reverseMagnitudePair ss
+        EQ ->
+            EQ
 
-                    cr =
-                        compareMagnitude rss
-                in
-                    if sa == Positive then
-                        cr
-                    else
-                        invert_order cr
+        GT ->
+            LT
 
 
 {-| Equals
@@ -559,12 +535,11 @@ fillZeroes d =
     let
         d_s =
             Basics.toString d
+
+        len =
+            String.length d_s
     in
-        let
-            len =
-                String.length d_s
-        in
-            zeroes (6 - len) ++ d_s
+        zeroes (maxDigitMagnitude - len) ++ d_s
 
 
 revmagnitudeToString : List Digit -> String
@@ -572,9 +547,6 @@ revmagnitudeToString m =
     case m of
         [] ->
             "0"
-
-        [ x ] ->
-            Basics.toString x
 
         x :: xs ->
             (Basics.toString x) ++ String.concat (List.map fillZeroes xs)
@@ -604,32 +576,26 @@ range a b =
 
 dividers : List Integer
 dividers =
-    let
-        log =
-            Basics.logBase 2 (Basics.toFloat max_digit_value)
-
-        log_i =
-            (Basics.truncate log) + 1
-
-        exp_values =
-            List.reverse (range 0 log_i)
-
-        int_values =
-            List.map (\x -> 2 ^ x) exp_values
-    in
-        List.map fromInt int_values
+    maxDigitValue
+        |> Basics.toFloat
+        |> Basics.logBase 2
+        |> Basics.truncate
+        |> (+) 1
+        |> (List.reverse << range 0)
+        |> List.map ((^) 2)
+        |> List.map fromInt
 
 
-pad_digits : Int -> Integer
-pad_digits n =
+padDigits : Int -> Integer
+padDigits n =
     if n == 0 then
         fromInt 1
     else
-        mul (pad_digits (n - 1)) (fromInt max_digit_value)
+        mul (padDigits (n - 1)) (fromInt maxDigitValue)
 
 
-divmod_digit : Integer -> List Integer -> Integer -> Integer -> ( Integer, Integer )
-divmod_digit padding to_test a b =
+divmodDigit : Integer -> List Integer -> Integer -> Integer -> ( Integer, Integer )
+divmodDigit padding to_test a b =
     case to_test of
         [] ->
             ( fromInt 0, a )
@@ -646,22 +612,22 @@ divmod_digit padding to_test a b =
                         ( fromInt 0, a )
 
                 ( restdiv, restmod ) =
-                    divmod_digit padding xs newmod b
+                    divmodDigit padding xs newmod b
             in
                 ( add newdiv restdiv, restmod )
 
 
-divmodPrime : Int -> Integer -> Integer -> ( Integer, Integer )
-divmodPrime n a b =
+divMod_ : Int -> Integer -> Integer -> ( Integer, Integer )
+divMod_ n a b =
     if n == 0 then
-        divmod_digit (pad_digits n) dividers a b
+        divmodDigit (padDigits n) dividers a b
     else
         let
             ( cdiv, cmod ) =
-                divmod_digit (pad_digits n) dividers a b
+                divmodDigit (padDigits n) dividers a b
 
             ( rdiv, rmod ) =
-                divmodPrime (n - 1) cmod b
+                divMod_ (n - 1) cmod b
         in
             ( add cdiv rdiv, rmod )
 
@@ -683,43 +649,33 @@ divmod a b =
             cand_l =
                 (List.length m1) - (List.length m2) + 1
 
-            l =
-                if cand_l < 0 then
-                    0
-                else
-                    cand_l
-
             sign =
-                case ( s1, s2 ) of
-                    ( Positive, Positive ) ->
-                        Positive
-
-                    ( Negative, Negative ) ->
-                        Positive
-
-                    _ ->
-                        Negative
+                signProduct s1 s2
 
             ( Integer ( _, d ), Integer ( _, m ) ) =
-                divmodPrime l (abs a) (abs b)
+                divMod_ (Basics.max 0 cand_l) (abs a) (abs b)
         in
             Just ( Integer ( sign, d ), Integer ( s1, m ) )
+
+
+signProduct : Sign -> Sign -> Sign
+signProduct x y =
+    if x == y then
+        Positive
+    else
+        Negative
 
 
 {-| divmod that returns the pair of values, or crashes if the divisor is zero
 -}
 unsafeDivmod : Integer -> Integer -> ( Integer, Integer )
 unsafeDivmod a b =
-    let
-        v =
-            divmod a b
-    in
-        case v of
-            Just r ->
-                r
+    case divmod a b of
+        Just r ->
+            r
 
-            Nothing ->
-                Debug.crash "Divide by zero"
+        Nothing ->
+            Debug.crash "Divide by zero"
 
 
 {-| Get the sign of the integer

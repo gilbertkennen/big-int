@@ -214,12 +214,12 @@ minMaxTests =
         ]
 
 
-max_digit_valueTests : Test
-max_digit_valueTests =
-    describe "max_digit_value testsuite"
-        [ test "max_digit_value ^ 2 /= 1 + max_digit_value ^ 2" <|
+maxDigitValueTests : Test
+maxDigitValueTests =
+    describe "maxDigitValue testsuite"
+        [ test "maxDigitValue ^ 2 /= 1 + maxDigitValue ^ 2" <|
             \_ ->
-                Expect.notEqual (max_digit_value * max_digit_value) ((max_digit_value * max_digit_value) + 1)
+                Expect.notEqual (maxDigitValue * maxDigitValue) ((maxDigitValue * maxDigitValue) + 1)
         ]
 
 
