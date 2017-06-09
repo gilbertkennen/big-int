@@ -66,6 +66,32 @@ type Sign
     | Negative
 
 
+signProduct : Sign -> Sign -> Sign
+signProduct x y =
+    if x == y then
+        Positive
+    else
+        Negative
+
+
+signNegate : Sign -> Sign
+signNegate sign =
+    case sign of
+        Positive ->
+            Negative
+
+        Negative ->
+            Positive
+
+
+signFromInt : Int -> Sign
+signFromInt x =
+    if x < 0 then
+        Negative
+    else
+        Positive
+
+
 type alias Digit =
     Int
 
@@ -92,7 +118,9 @@ type IntegerNotNormalised
     = IntegerNotNormalised ( Sign, MagnitudeNotNormalised )
 
 
-{-| Enough to hold digit * digit without overflowing to double
+{-| Enough to hold digit * digit without overflowing to double.
+
+Base 10 to make stringification easier.
 -}
 maxDigitValue : Int
 maxDigitValue =
@@ -108,14 +136,7 @@ maxDigitMagnitude =
 -}
 fromInt : Int -> Integer
 fromInt x =
-    let
-        sign =
-            if x < 0 then
-                Negative
-            else
-                Positive
-    in
-        normalise <| IntegerNotNormalised ( sign, MagnitudeNotNormalised [ Basics.abs x ] )
+    normalise <| IntegerNotNormalised ( signFromInt x, MagnitudeNotNormalised [ Basics.abs x ] )
 
 
 {-| Makes an Integer from a String
@@ -215,16 +236,6 @@ isNegativeMagnitude (Magnitude xs) =
 
         Just x ->
             x < 0
-
-
-signNegate : Sign -> Sign
-signNegate sign =
-    case sign of
-        Positive ->
-            Negative
-
-        Negative ->
-            Positive
 
 
 normaliseDigit : Int -> ( Int, Digit )
@@ -656,14 +667,6 @@ divmod a b =
                 divMod_ (Basics.max 0 cand_l) (abs a) (abs b)
         in
             Just ( Integer ( sign, d ), Integer ( s1, m ) )
-
-
-signProduct : Sign -> Sign -> Sign
-signProduct x y =
-    if x == y then
-        Positive
-    else
-        Negative
 
 
 {-| divmod that returns the pair of values, or crashes if the divisor is zero
