@@ -1,7 +1,7 @@
 module Data.Integer
     exposing
         ( Integer
-        , Sign(Positive, Negative)
+        , Sign(Positive, Negative, Zero)
         , sign
         , fromInt
         , fromString
@@ -29,19 +29,14 @@ module Data.Integer
 {-| Infinite digits integers
 # The datatype
 @docs Integer, Sign
-
 # From/To
 @docs fromInt, fromString, toString
-
 # Common operations
 @docs add, sub, negate, mul, divmod, abs, sign
-
 # Comparison
 @docs compare, gt, gte, lt, lte, eq, neq, max, min
-
 # Common numbers
 @docs zero, one, minusOne
-
 -}
 
 import Basics
@@ -58,11 +53,14 @@ import String
 type Sign
     = Positive
     | Negative
+    | Zero
 
 
 signProduct : Sign -> Sign -> Sign
 signProduct x y =
-    if x == y then
+    if x == Zero || y == Zero then
+        Zero
+    else if x == y then
         Positive
     else
         Negative
@@ -77,13 +75,18 @@ signNegate sign =
         Negative ->
             Positive
 
+        Zero ->
+            Zero
+
 
 signFromInt : Int -> Sign
 signFromInt x =
     if x < 0 then
         Negative
-    else
+    else if x > 0 then
         Positive
+    else
+        Zero
 
 
 type alias Digit =
@@ -105,7 +108,9 @@ type MagnitudeNotNormalised
 {-| Integer type
 -}
 type Integer
-    = Integer ( Sign, Magnitude )
+    = Pos Magnitude
+    | Neg Magnitude
+    | Zer
 
 
 type IntegerNotNormalised
@@ -131,25 +136,41 @@ fromInt x =
     (normalise <| IntegerNotNormalised ( signFromInt x, MagnitudeNotNormalised [ Basics.abs x ] ))
 
 
+mkInteger : Sign -> Magnitude -> Integer
+mkInteger s ((Magnitude ds) as mag) =
+    if List.isEmpty ds then
+        Zer
+    else
+        case s of
+            Zero ->
+                Zer
+
+            Positive ->
+                Pos mag
+
+            Negative ->
+                Neg mag
+
+
 {-| Makes an Integer from a String
 -}
 fromString : String -> Maybe Integer
 fromString x =
     case String.toList x of
         [] ->
-            Just (fromInt 0)
+            Just zero
 
         '-' :: xs ->
             fromString_ xs
-                |> Maybe.map (Integer << (,) Negative)
+                |> Maybe.map (mkInteger Negative)
 
         '+' :: xs ->
             fromString_ xs
-                |> Maybe.map (Integer << (,) Positive)
+                |> Maybe.map (mkInteger Positive)
 
         xs ->
             fromString_ xs
-                |> Maybe.map (Integer << (,) Positive)
+                |> Maybe.map (mkInteger Positive)
 
 
 fromString_ : List Char -> Maybe Magnitude
@@ -214,15 +235,15 @@ greedyZip f =
 
 
 normalise : IntegerNotNormalised -> Integer
-normalise (IntegerNotNormalised ( sign, x )) =
+normalise (IntegerNotNormalised ( s, digits )) =
     let
-        nmagnitude =
-            normaliseMagnitude x
+        normalisedMag =
+            normaliseMagnitude digits
     in
-        if isNegativeMagnitude nmagnitude then
-            normalise (IntegerNotNormalised ( signNegate sign, reverseMagnitude nmagnitude ))
+        if isNegativeMagnitude normalisedMag then
+            normalise (IntegerNotNormalised ( signNegate s, reverseMagnitude normalisedMag ))
         else
-            Integer ( sign, nmagnitude )
+            mkInteger s normalisedMag
 
 
 reverseMagnitude : Magnitude -> MagnitudeNotNormalised
@@ -231,8 +252,8 @@ reverseMagnitude (Magnitude xs) =
 
 
 isNegativeMagnitude : Magnitude -> Bool
-isNegativeMagnitude (Magnitude xs) =
-    case List.Extra.last xs of
+isNegativeMagnitude (Magnitude digits) =
+    case List.Extra.last digits of
         Nothing ->
             False
 
@@ -241,15 +262,15 @@ isNegativeMagnitude (Magnitude xs) =
 
 
 normaliseDigit : Int -> ( Int, Digit )
-normaliseDigit d =
-    if d < 0 then
+normaliseDigit x =
+    if x < 0 then
         let
             ( carry, dPrime ) =
-                normaliseDigit (d + maxDigitValue)
+                normaliseDigit (x + maxDigitValue)
         in
             ( carry - 1, dPrime )
     else
-        ( d // maxDigitValue, rem d maxDigitValue )
+        ( x // maxDigitValue, rem x maxDigitValue )
 
 
 normaliseDigitList : List Int -> List Digit
@@ -258,19 +279,17 @@ normaliseDigitList x =
         [] ->
             []
 
-        d :: [] ->
+        x1 :: xs ->
             let
                 ( c, dPrime ) =
-                    normaliseDigit d
+                    normaliseDigit x1
             in
-                [ dPrime, c ]
+                case xs of
+                    [] ->
+                        [ dPrime, c ]
 
-        d :: d2 :: xs ->
-            let
-                ( c, dPrime ) =
-                    normaliseDigit d
-            in
-                dPrime :: normaliseDigitList (d2 + c :: xs)
+                    x2 :: rest ->
+                        dPrime :: normaliseDigitList (x2 + c :: rest)
 
 
 dropZeroes : List Digit -> List Digit
@@ -286,13 +305,16 @@ normaliseMagnitude (MagnitudeNotNormalised xs) =
 
 
 toPositiveSign : Integer -> IntegerNotNormalised
-toPositiveSign (Integer ( sign, Magnitude xs )) =
-    case sign of
-        Positive ->
-            IntegerNotNormalised ( Positive, MagnitudeNotNormalised xs )
+toPositiveSign integer =
+    case integer of
+        Zer ->
+            IntegerNotNormalised ( Zero, MagnitudeNotNormalised [] )
 
-        Negative ->
-            IntegerNotNormalised ( Positive, reverseMagnitude (Magnitude xs) )
+        Neg mag ->
+            IntegerNotNormalised ( Positive, reverseMagnitude mag )
+
+        Pos (Magnitude xs) ->
+            IntegerNotNormalised ( Positive, MagnitudeNotNormalised xs )
 
 
 {-| Adds two Integers
@@ -318,15 +340,31 @@ add a b =
 {-| Changes the sign of an Integer
 -}
 negate : Integer -> Integer
-negate (Integer ( sign, xs )) =
-    normalise (toPositiveSign (Integer ( signNegate sign, xs )))
+negate integer =
+    case integer of
+        Zer ->
+            Zer
+
+        Pos mag ->
+            Neg mag
+
+        Neg mag ->
+            Pos mag
 
 
 {-| Absolute value
 -}
 abs : Integer -> Integer
-abs (Integer ( s, m )) =
-    Integer ( Positive, m )
+abs integer =
+    case integer of
+        Zer ->
+            Zer
+
+        Neg mag ->
+            Pos mag
+
+        i ->
+            i
 
 
 {-| Substracts the second Integer from the first
@@ -339,19 +377,23 @@ sub a b =
 {-| Multiplies two Integers
 -}
 mul : Integer -> Integer -> Integer
-mul (Integer ( sign1, m1 )) (Integer ( sign2, m2 )) =
-    Integer ( signProduct sign1 sign2, mulMagnitudes m1 m2 )
-        |> positiveZero
+mul int1 int2 =
+    mkInteger
+        (signProduct (sign int1) (sign int2))
+        (mulMagnitudes (magnitude int1) (magnitude int2))
 
 
-positiveZero : Integer -> Integer
-positiveZero ((Integer ( _, Magnitude xs )) as int) =
-    case xs of
-        [] ->
-            Integer ( Positive, Magnitude [] )
+magnitude : Integer -> Magnitude
+magnitude integer =
+    case integer of
+        Zer ->
+            Magnitude []
 
-        _ ->
-            int
+        Pos mag ->
+            mag
+
+        Neg mag ->
+            mag
 
 
 mulMagnitudes : Magnitude -> Magnitude -> Magnitude
@@ -371,12 +413,12 @@ mulMagnitudes (Magnitude m1) (Magnitude m2) =
                 (Magnitude rest) =
                     mulMagnitudes (Magnitude mx) (Magnitude m2)
 
-                (Integer ( _, result )) =
+                integer =
                     add
-                        (Integer ( Positive, accum ))
-                        (Integer ( Positive, (Magnitude (0 :: rest)) ))
+                        (mkInteger Positive accum)
+                        (mkInteger Positive (Magnitude (0 :: rest)))
             in
-                result
+                magnitude integer
 
 
 mulSingleDigit : Magnitude -> Digit -> Magnitude
@@ -390,25 +432,39 @@ mulSingleDigit (Magnitude xs) d =
 {-| Compares two Integers
 -}
 compare : Integer -> Integer -> Order
-compare (Integer ( sa, a )) (Integer ( sb, b )) =
-    case ( sa, sb ) of
-        ( Positive, Negative ) ->
-            GT
-
-        ( Negative, Positive ) ->
+compare int1 int2 =
+    case ( int1, int2 ) of
+        ( Zer, Pos _ ) ->
             LT
 
-        _ ->
-            let
-                cr =
-                    sameSizeNormalized a b
-                        |> reverseMagnitudePair
-                        |> compareMagnitude
-            in
-                if sa == Positive then
-                    cr
-                else
-                    orderNegate cr
+        ( Zer, Zer ) ->
+            EQ
+
+        ( Zer, Neg _ ) ->
+            GT
+
+        ( Pos _, Zer ) ->
+            GT
+
+        ( Pos _, Neg _ ) ->
+            GT
+
+        ( Neg _, Pos _ ) ->
+            LT
+
+        ( Neg _, Zer ) ->
+            LT
+
+        ( Pos mag1, Pos mag2 ) ->
+            sameSizeNormalized mag1 mag2
+                |> reverseMagnitudePair
+                |> compareMagnitude
+
+        ( Neg mag1, Neg mag2 ) ->
+            sameSizeNormalized mag1 mag2
+                |> reverseMagnitudePair
+                |> compareMagnitude
+                |> orderNegate
 
 
 orderNegate : Order -> Order
@@ -566,9 +622,9 @@ fillZeroes d =
         zeroes (maxDigitMagnitude - len) ++ d_s
 
 
-revmagnitudeToString : List Digit -> String
-revmagnitudeToString m =
-    case m of
+revMagnitudeToString : Magnitude -> String
+revMagnitudeToString (Magnitude digits) =
+    case List.reverse digits of
         [] ->
             "0"
 
@@ -579,23 +635,16 @@ revmagnitudeToString m =
 {-| Converts the Integer to a String
 -}
 toString : Integer -> String
-toString (Integer ( s, Magnitude m )) =
-    let
-        sign =
-            if s == Positive then
-                ""
-            else
-                "-"
-    in
-        sign ++ revmagnitudeToString (List.reverse m)
+toString integer =
+    case integer of
+        Zer ->
+            "0"
 
+        Pos mag ->
+            revMagnitudeToString mag
 
-range : Int -> Int -> List Int
-range a b =
-    if a == b then
-        [ a ]
-    else
-        a :: range (a + 1) b
+        Neg mag ->
+            "-" ++ revMagnitudeToString mag
 
 
 dividers : List Integer
@@ -605,7 +654,8 @@ dividers =
         |> Basics.logBase 2
         |> Basics.truncate
         |> (+) 1
-        |> (List.reverse << range 0)
+        |> List.range 0
+        |> List.reverse
         |> List.map ((^) 2)
         |> List.map fromInt
 
@@ -659,37 +709,49 @@ divMod_ n a b =
 {-| Division and modulus
 -}
 divmod : Integer -> Integer -> Maybe ( Integer, Integer )
-divmod a b =
-    if eq b zero then
+divmod int1 int2 =
+    if eq int2 zero then
         Nothing
     else
         let
-            (Integer ( s1, Magnitude m1 )) =
-                a
-
-            (Integer ( s2, Magnitude m2 )) =
-                b
-
             cand_l =
-                (List.length m1) - (List.length m2) + 1
+                (List.length (digits int1)) - (List.length (digits int2)) + 1
 
-            sign =
-                signProduct s1 s2
+            s =
+                signProduct (sign int1) (sign int2)
 
-            ( Integer ( _, d ), Integer ( _, m ) ) =
-                divMod_ (Basics.max 0 cand_l) (abs a) (abs b)
+            ( d, m ) =
+                divMod_ (Basics.max 0 cand_l) (abs int1) (abs int2)
         in
-            Just
-                ( Integer ( sign, d ) |> positiveZero
-                , Integer ( s1, m ) |> positiveZero
-                )
+            Just ( mkInteger s (magnitude d), mkInteger (sign int1) (magnitude m) )
+
+
+digits : Integer -> List Digit
+digits integer =
+    case integer of
+        Zer ->
+            []
+
+        Pos (Magnitude digits) ->
+            digits
+
+        Neg (Magnitude digits) ->
+            digits
 
 
 {-| Get the sign of the integer
 -}
 sign : Integer -> Sign
-sign (Integer ( x, _ )) =
-    x
+sign integer =
+    case integer of
+        Zer ->
+            Zero
+
+        Pos _ ->
+            Positive
+
+        Neg _ ->
+            Negative
 
 
 {-| Number 0

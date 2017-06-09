@@ -7,7 +7,6 @@
         "src"
     ],
     "exposed-modules": [
-        "Data.Integer"
     ],
     "dependencies": {
         "elm-community/list-extra": "6.1.0 <= v < 7.0.0",

@@ -93,8 +93,9 @@ mulTests =
                 mul x y
                     |> (\n -> divmod n y)
                     |> Expect.equal (Just ( x, zero ))
-        , fuzz (tuple ( integer, integer )) "Commutative multiplication" <|
-            \( a, b ) -> Expect.equal (mul a b) (mul b a)
+        , fuzz (tuple ( integer, integer )) "x * y = y * x" <|
+            \( x, y ) ->
+                Expect.equal (mul x y) (mul y x)
         ]
 
 
@@ -108,7 +109,8 @@ divmodTests =
                         Expect.equal y (fromInt 0)
 
                     Just ( c, r ) ->
-                        add (mul c y) r
+                        mul c y
+                            |> add r
                             |> Expect.equal x
         ]
 
@@ -117,23 +119,25 @@ absTests : Test
 absTests =
     describe "abs"
         [ fuzz integer "|x| = x; x >= 0 and |x| = -x; x < 0" <|
-            \a ->
-                if gte a (fromInt 0) then
-                    Expect.equal (Data.Integer.abs a) a
+            \x ->
+                if gte x zero then
+                    Expect.equal (Data.Integer.abs x) x
                 else
-                    Expect.equal (Data.Integer.abs a) (Data.Integer.negate a)
+                    Expect.equal (Data.Integer.abs x) (Data.Integer.negate x)
         ]
 
 
 signTests : Test
 signTests =
     describe "sign"
-        [ fuzz integer "sign x = Positive: x >=0 and sign x = Negative: x < 0" <|
-            \a ->
-                if gte a zero then
-                    Expect.equal (sign a) Positive
+        [ fuzz integer "sign x = Positive; x >0 and sign x = Negative; x < 0 and sign x = Zero; x = 0" <|
+            \x ->
+                if eq x zero then
+                    Expect.equal (sign x) Zero
+                else if gt x zero then
+                    Expect.equal (sign x) Positive
                 else
-                    Expect.equal (sign a) Negative
+                    Expect.equal (sign x) Negative
         ]
 
 
