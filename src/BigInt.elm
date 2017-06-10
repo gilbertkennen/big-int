@@ -1,6 +1,6 @@
-module Data.Integer
+module BigInt
     exposing
-        ( Integer
+        ( BigInt
         , Sign(Positive, Negative, Zero)
         , sign
         , fromInt
@@ -33,7 +33,7 @@ module Data.Integer
 
 # The datatype
 
-@docs Integer, Sign
+@docs BigInt, Sign
 
 
 # From/To
@@ -66,7 +66,7 @@ import Result exposing (Result)
 import String
 
 
-{-| The sign of the integer
+{-| The sign of the bigInt
 -}
 type Sign
     = Positive
@@ -123,21 +123,21 @@ type MagnitudeNotNormalised
     = MagnitudeNotNormalised (List Digit)
 
 
-{-| Integer type
+{-| BigInt type
 -}
-type Integer
+type BigInt
     = Pos Magnitude
     | Neg Magnitude
     | Zer
 
 
-type IntegerNotNormalised
-    = IntegerNotNormalised Sign MagnitudeNotNormalised
+type BigIntNotNormalised
+    = BigIntNotNormalised Sign MagnitudeNotNormalised
 
 
-digits : Integer -> List Digit
-digits integer =
-    case integer of
+digits : BigInt -> List Digit
+digits bigInt =
+    case bigInt of
         Zer ->
             []
 
@@ -148,7 +148,7 @@ digits integer =
             digits
 
 
-{-| Six base-10 digits is the most we can have where x * x < the JS integer limit.
+{-| Six base-10 digits is the most we can have where x * x < the JS bigInt limit.
 -}
 maxDigitValue : Int
 maxDigitValue =
@@ -160,15 +160,15 @@ maxDigitMagnitude =
     6
 
 
-{-| Makes an Integer from an Int
+{-| Makes an BigInt from an Int
 -}
-fromInt : Int -> Integer
+fromInt : Int -> BigInt
 fromInt x =
-    (normalise <| IntegerNotNormalised (signFromInt x) (MagnitudeNotNormalised [ Basics.abs x ]))
+    (normalise <| BigIntNotNormalised (signFromInt x) (MagnitudeNotNormalised [ Basics.abs x ]))
 
 
-mkInteger : Sign -> Magnitude -> Integer
-mkInteger s ((Magnitude digits) as mag) =
+mkBigInt : Sign -> Magnitude -> BigInt
+mkBigInt s ((Magnitude digits) as mag) =
     if List.isEmpty digits then
         Zer
     else
@@ -183,9 +183,9 @@ mkInteger s ((Magnitude digits) as mag) =
                 Neg mag
 
 
-{-| Makes an Integer from a String
+{-| Makes an BigInt from a String
 -}
-fromString : String -> Maybe Integer
+fromString : String -> Maybe BigInt
 fromString x =
     case String.toList x of
         [] ->
@@ -193,15 +193,15 @@ fromString x =
 
         '-' :: xs ->
             fromString_ xs
-                |> Maybe.map (mkInteger Negative)
+                |> Maybe.map (mkBigInt Negative)
 
         '+' :: xs ->
             fromString_ xs
-                |> Maybe.map (mkInteger Positive)
+                |> Maybe.map (mkBigInt Positive)
 
         xs ->
             fromString_ xs
-                |> Maybe.map (mkInteger Positive)
+                |> Maybe.map (mkBigInt Positive)
 
 
 fromString_ : List Char -> Maybe Magnitude
@@ -265,16 +265,16 @@ greedyZip f =
         go []
 
 
-normalise : IntegerNotNormalised -> Integer
-normalise (IntegerNotNormalised s digits) =
+normalise : BigIntNotNormalised -> BigInt
+normalise (BigIntNotNormalised s digits) =
     let
         (Magnitude normalisedMag) =
             normaliseMagnitude digits
     in
         if isNegativeMagnitude (normalisedMag) then
-            normalise (mkIntegerNotNormalised (signNegate s) (reverseMagnitude normalisedMag))
+            normalise (mkBigIntNotNormalised (signNegate s) (reverseMagnitude normalisedMag))
         else
-            mkInteger s (Magnitude normalisedMag)
+            mkBigInt s (Magnitude normalisedMag)
 
 
 normaliseDigitList : List Int -> List Digit
@@ -335,33 +335,33 @@ isNegativeMagnitude digits =
             x < 0
 
 
-toPositiveSign : Integer -> IntegerNotNormalised
-toPositiveSign integer =
-    case integer of
+toPositiveSign : BigInt -> BigIntNotNormalised
+toPositiveSign bigInt =
+    case bigInt of
         Zer ->
-            mkIntegerNotNormalised Zero []
+            mkBigIntNotNormalised Zero []
 
         Neg (Magnitude digits) ->
-            mkIntegerNotNormalised Positive (reverseMagnitude digits)
+            mkBigIntNotNormalised Positive (reverseMagnitude digits)
 
         Pos (Magnitude digits) ->
-            mkIntegerNotNormalised Positive digits
+            mkBigIntNotNormalised Positive digits
 
 
-mkIntegerNotNormalised : Sign -> List Digit -> IntegerNotNormalised
-mkIntegerNotNormalised s digits =
-    IntegerNotNormalised s (MagnitudeNotNormalised digits)
+mkBigIntNotNormalised : Sign -> List Digit -> BigIntNotNormalised
+mkBigIntNotNormalised s digits =
+    BigIntNotNormalised s (MagnitudeNotNormalised digits)
 
 
-{-| Adds two Integers
+{-| Adds two BigInts
 -}
-add : Integer -> Integer -> Integer
+add : BigInt -> BigInt -> BigInt
 add a b =
     let
-        (IntegerNotNormalised _ ma) =
+        (BigIntNotNormalised _ ma) =
             toPositiveSign a
 
-        (IntegerNotNormalised _ mb) =
+        (BigIntNotNormalised _ mb) =
             toPositiveSign b
 
         (MagnitudePair p) =
@@ -370,14 +370,14 @@ add a b =
         added =
             List.map (\( x, y ) -> x + y) p
     in
-        normalise <| IntegerNotNormalised Positive (MagnitudeNotNormalised added)
+        normalise <| BigIntNotNormalised Positive (MagnitudeNotNormalised added)
 
 
-{-| Changes the sign of an Integer
+{-| Changes the sign of an BigInt
 -}
-negate : Integer -> Integer
-negate integer =
-    case integer of
+negate : BigInt -> BigInt
+negate bigInt =
+    case bigInt of
         Zer ->
             Zer
 
@@ -390,9 +390,9 @@ negate integer =
 
 {-| Absolute value
 -}
-abs : Integer -> Integer
-abs integer =
-    case integer of
+abs : BigInt -> BigInt
+abs bigInt =
+    case bigInt of
         Zer ->
             Zer
 
@@ -403,25 +403,25 @@ abs integer =
             i
 
 
-{-| Substracts the second Integer from the first
+{-| Substracts the second BigInt from the first
 -}
-sub : Integer -> Integer -> Integer
+sub : BigInt -> BigInt -> BigInt
 sub a b =
     add a (negate b)
 
 
-{-| Multiplies two Integers
+{-| Multiplies two BigInts
 -}
-mul : Integer -> Integer -> Integer
+mul : BigInt -> BigInt -> BigInt
 mul int1 int2 =
-    mkInteger
+    mkBigInt
         (signProduct (sign int1) (sign int2))
         (mulMagnitudes (magnitude int1) (magnitude int2))
 
 
-magnitude : Integer -> Magnitude
-magnitude integer =
-    case integer of
+magnitude : BigInt -> Magnitude
+magnitude bigInt =
+    case bigInt of
         Zer ->
             Magnitude []
 
@@ -449,12 +449,12 @@ mulMagnitudes (Magnitude m1) (Magnitude m2) =
                 (Magnitude rest) =
                     mulMagnitudes (Magnitude mx) (Magnitude m2)
 
-                integer =
+                bigInt =
                     add
-                        (mkInteger Positive accum)
-                        (mkInteger Positive (Magnitude (0 :: rest)))
+                        (mkBigInt Positive accum)
+                        (mkBigInt Positive (Magnitude (0 :: rest)))
             in
-                magnitude integer
+                magnitude bigInt
 
 
 mulSingleDigit : Magnitude -> Digit -> Magnitude
@@ -465,9 +465,9 @@ mulSingleDigit (Magnitude xs) d =
         |> normaliseMagnitude
 
 
-{-| Compares two Integers
+{-| Compares two BigInts
 -}
-compare : Integer -> Integer -> Order
+compare : BigInt -> BigInt -> Order
 compare int1 int2 =
     case ( int1, int2 ) of
         ( Zer, Pos _ ) ->
@@ -518,7 +518,7 @@ orderNegate x =
 
 {-| Equals
 -}
-eq : Integer -> Integer -> Bool
+eq : BigInt -> BigInt -> Bool
 eq a b =
     case compare a b of
         EQ ->
@@ -530,14 +530,14 @@ eq a b =
 
 {-| Not equals
 -}
-neq : Integer -> Integer -> Bool
+neq : BigInt -> BigInt -> Bool
 neq a b =
     not (eq a b)
 
 
 {-| Less than
 -}
-lt : Integer -> Integer -> Bool
+lt : BigInt -> BigInt -> Bool
 lt a b =
     case compare a b of
         LT ->
@@ -549,7 +549,7 @@ lt a b =
 
 {-| Greater than
 -}
-gt : Integer -> Integer -> Bool
+gt : BigInt -> BigInt -> Bool
 gt a b =
     case compare a b of
         GT ->
@@ -561,7 +561,7 @@ gt a b =
 
 {-| Greater than or equals
 -}
-gte : Integer -> Integer -> Bool
+gte : BigInt -> BigInt -> Bool
 gte a b =
     case compare a b of
         GT ->
@@ -576,7 +576,7 @@ gte a b =
 
 {-| Less than or equals
 -}
-lte : Integer -> Integer -> Bool
+lte : BigInt -> BigInt -> Bool
 lte a b =
     case compare a b of
         LT ->
@@ -589,9 +589,9 @@ lte a b =
             False
 
 
-{-| Returns the largest of two Integers
+{-| Returns the largest of two BigInts
 -}
-max : Integer -> Integer -> Integer
+max : BigInt -> BigInt -> BigInt
 max a b =
     case compare a b of
         GT ->
@@ -604,9 +604,9 @@ max a b =
             b
 
 
-{-| Returns the smallest of two Integers
+{-| Returns the smallest of two BigInts
 -}
-min : Integer -> Integer -> Integer
+min : BigInt -> BigInt -> BigInt
 min a b =
     case compare a b of
         LT ->
@@ -668,11 +668,11 @@ revMagnitudeToString (Magnitude digits) =
             (Basics.toString x) ++ String.concat (List.map fillZeroes xs)
 
 
-{-| Converts the Integer to a String
+{-| Converts the BigInt to a String
 -}
-toString : Integer -> String
-toString integer =
-    case integer of
+toString : BigInt -> String
+toString bigInt =
+    case bigInt of
         Zer ->
             "0"
 
@@ -683,7 +683,7 @@ toString integer =
             "-" ++ revMagnitudeToString mag
 
 
-dividers : List Integer
+dividers : List BigInt
 dividers =
     maxDigitValue
         |> Basics.toFloat
@@ -696,7 +696,7 @@ dividers =
         |> List.map fromInt
 
 
-padDigits : Int -> Integer
+padDigits : Int -> BigInt
 padDigits n =
     if n == 0 then
         fromInt 1
@@ -704,9 +704,9 @@ padDigits n =
         mul (padDigits (n - 1)) (fromInt maxDigitValue)
 
 
-{-| Integer division. Produces 0 when dividing by 0 (like (//)).
+{-| BigInt division. Produces 0 when dividing by 0 (like (//)).
 -}
-div : Integer -> Integer -> Integer
+div : BigInt -> BigInt -> BigInt
 div num den =
     divmod num den
         |> Maybe.map Tuple.first
@@ -715,7 +715,7 @@ div num den =
 
 {-| Modulus. Crashes on zero (like (%)).
 -}
-mod : Integer -> Integer -> Integer
+mod : BigInt -> BigInt -> BigInt
 mod num den =
     case divmod num den |> Maybe.map Tuple.second of
         Nothing ->
@@ -727,7 +727,7 @@ mod num den =
 
 {-| Division and modulus
 -}
-divmod : Integer -> Integer -> Maybe ( Integer, Integer )
+divmod : BigInt -> BigInt -> Maybe ( BigInt, BigInt )
 divmod int1 int2 =
     if eq int2 zero then
         Nothing
@@ -742,10 +742,10 @@ divmod int1 int2 =
             ( d, m ) =
                 divMod_ (Basics.max 0 cand_l) (abs int1) (abs int2)
         in
-            Just ( mkInteger s (magnitude d), mkInteger (sign int1) (magnitude m) )
+            Just ( mkBigInt s (magnitude d), mkBigInt (sign int1) (magnitude m) )
 
 
-divmodDigit : Integer -> List Integer -> Integer -> Integer -> ( Integer, Integer )
+divmodDigit : BigInt -> List BigInt -> BigInt -> BigInt -> ( BigInt, BigInt )
 divmodDigit padding to_test a b =
     case to_test of
         [] ->
@@ -768,7 +768,7 @@ divmodDigit padding to_test a b =
                 ( add newdiv restdiv, restmod )
 
 
-divMod_ : Int -> Integer -> Integer -> ( Integer, Integer )
+divMod_ : Int -> BigInt -> BigInt -> ( BigInt, BigInt )
 divMod_ n a b =
     if n == 0 then
         divmodDigit (padDigits n) dividers a b
@@ -783,11 +783,11 @@ divMod_ n a b =
             ( add cdiv rdiv, rmod )
 
 
-{-| Get the sign of the integer
+{-| Get the sign of the bigInt
 -}
-sign : Integer -> Sign
-sign integer =
-    case integer of
+sign : BigInt -> Sign
+sign bigInt =
+    case bigInt of
         Zer ->
             Zero
 
@@ -800,20 +800,20 @@ sign integer =
 
 {-| Number 0
 -}
-zero : Integer
+zero : BigInt
 zero =
     fromInt 0
 
 
 {-| Number 1
 -}
-one : Integer
+one : BigInt
 one =
     fromInt 1
 
 
 {-| Number -1
 -}
-minusOne : Integer
+minusOne : BigInt
 minusOne =
     fromInt -1
