@@ -697,11 +697,13 @@ dividers =
 
 
 padDigits : Int -> BigInt
-padDigits n =
-    if n == 0 then
-        fromInt 1
-    else
-        mul (padDigits (n - 1)) (fromInt maxDigitValue)
+padDigits =
+    repeatedly (mul (fromInt maxDigitValue)) one
+
+
+repeatedly : (a -> a) -> a -> Int -> a
+repeatedly f x n =
+    List.foldl (always f) x (List.range 1 n)
 
 
 {-| BigInt division. Produces 0 when dividing by 0 (like (//)).
