@@ -11,6 +11,8 @@ module Data.Integer
         , negate
         , mul
         , divmod
+        , div
+        , mod
         , abs
         , compare
         , gt
@@ -41,7 +43,7 @@ module Data.Integer
 
 # Common operations
 
-@docs add, sub, negate, mul, divmod, abs, sign
+@docs add, sub, negate, mul, div, mod, divmod, abs, sign
 
 
 # Comparison
@@ -130,7 +132,20 @@ type Integer
 
 
 type IntegerNotNormalised
-    = IntegerNotNormalised ( Sign, MagnitudeNotNormalised )
+    = IntegerNotNormalised Sign MagnitudeNotNormalised
+
+
+digits : Integer -> List Digit
+digits integer =
+    case integer of
+        Zer ->
+            []
+
+        Pos (Magnitude digits) ->
+            digits
+
+        Neg (Magnitude digits) ->
+            digits
 
 
 {-| Six base-10 digits is the most we can have where x * x < the JS integer limit.
@@ -149,12 +164,12 @@ maxDigitMagnitude =
 -}
 fromInt : Int -> Integer
 fromInt x =
-    (normalise <| IntegerNotNormalised ( signFromInt x, MagnitudeNotNormalised [ Basics.abs x ] ))
+    (normalise <| IntegerNotNormalised (signFromInt x) (MagnitudeNotNormalised [ Basics.abs x ]))
 
 
 mkInteger : Sign -> Magnitude -> Integer
-mkInteger s ((Magnitude ds) as mag) =
-    if List.isEmpty ds then
+mkInteger s ((Magnitude digits) as mag) =
+    if List.isEmpty digits then
         Zer
     else
         case s of
@@ -251,42 +266,15 @@ greedyZip f =
 
 
 normalise : IntegerNotNormalised -> Integer
-normalise (IntegerNotNormalised ( s, digits )) =
+normalise (IntegerNotNormalised s digits) =
     let
-        normalisedMag =
+        (Magnitude normalisedMag) =
             normaliseMagnitude digits
     in
-        if isNegativeMagnitude normalisedMag then
-            normalise (IntegerNotNormalised ( signNegate s, reverseMagnitude normalisedMag ))
+        if isNegativeMagnitude (normalisedMag) then
+            normalise (mkIntegerNotNormalised (signNegate s) (reverseMagnitude normalisedMag))
         else
-            mkInteger s normalisedMag
-
-
-reverseMagnitude : Magnitude -> MagnitudeNotNormalised
-reverseMagnitude (Magnitude xs) =
-    MagnitudeNotNormalised (List.map ((*) -1) xs)
-
-
-isNegativeMagnitude : Magnitude -> Bool
-isNegativeMagnitude (Magnitude digits) =
-    case List.Extra.last digits of
-        Nothing ->
-            False
-
-        Just x ->
-            x < 0
-
-
-normaliseDigit : Int -> ( Int, Digit )
-normaliseDigit x =
-    if x < 0 then
-        let
-            ( carry, dPrime ) =
-                normaliseDigit (x + maxDigitValue)
-        in
-            ( carry - 1, dPrime )
-    else
-        ( x // maxDigitValue, rem x maxDigitValue )
+            mkInteger s (Magnitude normalisedMag)
 
 
 normaliseDigitList : List Int -> List Digit
@@ -308,6 +296,18 @@ normaliseDigitList x =
                         dPrime :: normaliseDigitList (x2 + c :: rest)
 
 
+normaliseDigit : Int -> ( Int, Digit )
+normaliseDigit x =
+    if x < 0 then
+        let
+            ( carry, dPrime ) =
+                normaliseDigit (x + maxDigitValue)
+        in
+            ( carry - 1, dPrime )
+    else
+        ( x // maxDigitValue, rem x maxDigitValue )
+
+
 dropZeroes : List Digit -> List Digit
 dropZeroes =
     List.reverse
@@ -320,17 +320,37 @@ normaliseMagnitude (MagnitudeNotNormalised xs) =
     Magnitude (xs |> normaliseDigitList |> dropZeroes)
 
 
+reverseMagnitude : List Digit -> List Digit
+reverseMagnitude =
+    List.map ((*) -1)
+
+
+isNegativeMagnitude : List Digit -> Bool
+isNegativeMagnitude digits =
+    case List.Extra.last digits of
+        Nothing ->
+            False
+
+        Just x ->
+            x < 0
+
+
 toPositiveSign : Integer -> IntegerNotNormalised
 toPositiveSign integer =
     case integer of
         Zer ->
-            IntegerNotNormalised ( Zero, MagnitudeNotNormalised [] )
+            mkIntegerNotNormalised Zero []
 
-        Neg mag ->
-            IntegerNotNormalised ( Positive, reverseMagnitude mag )
+        Neg (Magnitude digits) ->
+            mkIntegerNotNormalised Positive (reverseMagnitude digits)
 
-        Pos (Magnitude xs) ->
-            IntegerNotNormalised ( Positive, MagnitudeNotNormalised xs )
+        Pos (Magnitude digits) ->
+            mkIntegerNotNormalised Positive digits
+
+
+mkIntegerNotNormalised : Sign -> List Digit -> IntegerNotNormalised
+mkIntegerNotNormalised s digits =
+    IntegerNotNormalised s (MagnitudeNotNormalised digits)
 
 
 {-| Adds two Integers
@@ -338,10 +358,10 @@ toPositiveSign integer =
 add : Integer -> Integer -> Integer
 add a b =
     let
-        (IntegerNotNormalised ( _, ma )) =
+        (IntegerNotNormalised _ ma) =
             toPositiveSign a
 
-        (IntegerNotNormalised ( _, mb )) =
+        (IntegerNotNormalised _ mb) =
             toPositiveSign b
 
         (MagnitudePair p) =
@@ -350,7 +370,7 @@ add a b =
         added =
             List.map (\( x, y ) -> x + y) p
     in
-        normalise (IntegerNotNormalised ( Positive, MagnitudeNotNormalised added ))
+        normalise <| IntegerNotNormalised Positive (MagnitudeNotNormalised added)
 
 
 {-| Changes the sign of an Integer
@@ -684,6 +704,47 @@ padDigits n =
         mul (padDigits (n - 1)) (fromInt maxDigitValue)
 
 
+{-| Integer division. Produces 0 when dividing by 0 (like (//)).
+-}
+div : Integer -> Integer -> Integer
+div num den =
+    divmod num den
+        |> Maybe.map Tuple.first
+        |> Maybe.withDefault zero
+
+
+{-| Modulus. Crashes on zero (like (%)).
+-}
+mod : Integer -> Integer -> Integer
+mod num den =
+    case divmod num den |> Maybe.map Tuple.second of
+        Nothing ->
+            Debug.crash "Cannot perform mod 0. Division by zero error."
+
+        Just x ->
+            x
+
+
+{-| Division and modulus
+-}
+divmod : Integer -> Integer -> Maybe ( Integer, Integer )
+divmod int1 int2 =
+    if eq int2 zero then
+        Nothing
+    else
+        let
+            cand_l =
+                (List.length (digits int1)) - (List.length (digits int2)) + 1
+
+            s =
+                signProduct (sign int1) (sign int2)
+
+            ( d, m ) =
+                divMod_ (Basics.max 0 cand_l) (abs int1) (abs int2)
+        in
+            Just ( mkInteger s (magnitude d), mkInteger (sign int1) (magnitude m) )
+
+
 divmodDigit : Integer -> List Integer -> Integer -> Integer -> ( Integer, Integer )
 divmodDigit padding to_test a b =
     case to_test of
@@ -720,39 +781,6 @@ divMod_ n a b =
                 divMod_ (n - 1) cmod b
         in
             ( add cdiv rdiv, rmod )
-
-
-{-| Division and modulus
--}
-divmod : Integer -> Integer -> Maybe ( Integer, Integer )
-divmod int1 int2 =
-    if eq int2 zero then
-        Nothing
-    else
-        let
-            cand_l =
-                (List.length (digits int1)) - (List.length (digits int2)) + 1
-
-            s =
-                signProduct (sign int1) (sign int2)
-
-            ( d, m ) =
-                divMod_ (Basics.max 0 cand_l) (abs int1) (abs int2)
-        in
-            Just ( mkInteger s (magnitude d), mkInteger (sign int1) (magnitude m) )
-
-
-digits : Integer -> List Digit
-digits integer =
-    case integer of
-        Zer ->
-            []
-
-        Pos (Magnitude digits) ->
-            digits
-
-        Neg (Magnitude digits) ->
-            digits
 
 
 {-| Get the sign of the integer
