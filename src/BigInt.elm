@@ -107,20 +107,8 @@ signFromInt x =
         Zero
 
 
-type alias Digit =
-    Int
-
-
 
 {- From smallest to largest digit, all the digits are positive, no leading zeros -}
-
-
-type Magnitude
-    = Magnitude (List Digit)
-
-
-type MagnitudeNotNormalised
-    = MagnitudeNotNormalised (List Digit)
 
 
 {-| BigInt type
@@ -131,40 +119,8 @@ type BigInt
     | Zer
 
 
-type BigIntNotNormalised
-    = BigIntNotNormalised Sign MagnitudeNotNormalised
-
-
-digits : BigInt -> List Digit
-digits bigInt =
-    case bigInt of
-        Zer ->
-            []
-
-        Pos (Magnitude digits) ->
-            digits
-
-        Neg (Magnitude digits) ->
-            digits
-
-
-{-| Six base-10 digits is the most we can have where x * x < the JS bigInt limit.
--}
-maxDigitValue : Int
-maxDigitValue =
-    -1 + 10 ^ maxDigitMagnitude
-
-
-maxDigitMagnitude : Int
-maxDigitMagnitude =
-    6
-
-
-{-| Makes an BigInt from an Int
--}
-fromInt : Int -> BigInt
-fromInt x =
-    (normalise <| BigIntNotNormalised (signFromInt x) (MagnitudeNotNormalised [ Basics.abs x ]))
+type Magnitude
+    = Magnitude (List Int)
 
 
 mkBigInt : Sign -> Magnitude -> BigInt
@@ -181,6 +137,53 @@ mkBigInt s ((Magnitude digits) as mag) =
 
             Negative ->
                 Neg mag
+
+
+type BigIntNotNormalised
+    = BigIntNotNormalised Sign MagnitudeNotNormalised
+
+
+type MagnitudeNotNormalised
+    = MagnitudeNotNormalised (List Int)
+
+
+mkBigIntNotNormalised : Sign -> List Int -> BigIntNotNormalised
+mkBigIntNotNormalised s digits =
+    BigIntNotNormalised s (MagnitudeNotNormalised digits)
+
+
+digits : BigInt -> List Int
+digits bigInt =
+    case bigInt of
+        Zer ->
+            []
+
+        Pos (Magnitude digits) ->
+            digits
+
+        Neg (Magnitude digits) ->
+            digits
+
+
+{-| Seven base-10 digits is the most we can have where x * x < the JS bigInt limit.
+99999999 > sqrt(MAX_SAFE_INTEGER) > 9999999
+A slightly higher number is possible, but would require a major reworking of the string functions.
+-}
+maxDigitValue : Int
+maxDigitValue =
+    -1 + 10 ^ maxDigitMagnitude
+
+
+maxDigitMagnitude : Int
+maxDigitMagnitude =
+    7
+
+
+{-| Makes an BigInt from an Int
+-}
+fromInt : Int -> BigInt
+fromInt x =
+    normalise <| BigIntNotNormalised (signFromInt x) (MagnitudeNotNormalised [ Basics.abs x ])
 
 
 {-| Makes an BigInt from a String
@@ -227,7 +230,7 @@ emptyZero (Magnitude xs) =
 
 
 type MagnitudePair
-    = MagnitudePair (List ( Digit, Digit ))
+    = MagnitudePair (List ( Int, Int ))
 
 
 sameSizeNormalized : Magnitude -> Magnitude -> MagnitudePair
@@ -277,7 +280,7 @@ normalise (BigIntNotNormalised s digits) =
             mkBigInt s (Magnitude normalisedMag)
 
 
-normaliseDigitList : List Int -> List Digit
+normaliseDigitList : List Int -> List Int
 normaliseDigitList x =
     case x of
         [] ->
@@ -296,43 +299,23 @@ normaliseDigitList x =
                         dPrime :: normaliseDigitList (x2 + c :: rest)
 
 
-normaliseDigit : Int -> ( Int, Digit )
+normaliseDigit : Int -> ( Int, Int )
 normaliseDigit x =
     if x < 0 then
-        let
-            ( carry, dPrime ) =
-                normaliseDigit (x + maxDigitValue)
-        in
-            ( carry - 1, dPrime )
+        normaliseDigit (x + maxDigitValue)
+            |> Tuple.mapFirst ((+) -1)
     else
         ( x // maxDigitValue, rem x maxDigitValue )
 
 
-dropZeroes : List Digit -> List Digit
+dropZeroes : List Int -> List Int
 dropZeroes =
-    List.reverse
-        >> List.Extra.dropWhile ((==) 0)
-        >> List.reverse
+    List.Extra.dropWhileRight ((==) 0)
 
 
 normaliseMagnitude : MagnitudeNotNormalised -> Magnitude
 normaliseMagnitude (MagnitudeNotNormalised xs) =
     Magnitude (xs |> normaliseDigitList |> dropZeroes)
-
-
-reverseMagnitude : List Digit -> List Digit
-reverseMagnitude =
-    List.map ((*) -1)
-
-
-isNegativeMagnitude : List Digit -> Bool
-isNegativeMagnitude digits =
-    case List.Extra.last digits of
-        Nothing ->
-            False
-
-        Just x ->
-            x < 0
 
 
 toPositiveSign : BigInt -> BigIntNotNormalised
@@ -348,9 +331,19 @@ toPositiveSign bigInt =
             mkBigIntNotNormalised Positive digits
 
 
-mkBigIntNotNormalised : Sign -> List Digit -> BigIntNotNormalised
-mkBigIntNotNormalised s digits =
-    BigIntNotNormalised s (MagnitudeNotNormalised digits)
+isNegativeMagnitude : List Int -> Bool
+isNegativeMagnitude digits =
+    case List.Extra.last digits of
+        Nothing ->
+            False
+
+        Just x ->
+            x < 0
+
+
+reverseMagnitude : List Int -> List Int
+reverseMagnitude =
+    List.map ((*) -1)
 
 
 {-| Adds two BigInts
@@ -457,7 +450,7 @@ mulMagnitudes (Magnitude m1) (Magnitude m2) =
                 magnitude bigInt
 
 
-mulSingleDigit : Magnitude -> Digit -> Magnitude
+mulSingleDigit : Magnitude -> Int -> Magnitude
 mulSingleDigit (Magnitude xs) d =
     xs
         |> List.map ((*) d)
@@ -620,7 +613,7 @@ min a b =
 
 
 type MagnitudePairReverseOrder
-    = MagnitudePairReverseOrder (List ( Digit, Digit ))
+    = MagnitudePairReverseOrder (List ( Int, Int ))
 
 
 reverseMagnitudePair : MagnitudePair -> MagnitudePairReverseOrder
@@ -646,7 +639,7 @@ zeroes n =
     String.repeat n "0"
 
 
-fillZeroes : Digit -> String
+fillZeroes : Int -> String
 fillZeroes d =
     let
         d_s =
@@ -683,29 +676,6 @@ toString bigInt =
             "-" ++ revMagnitudeToString mag
 
 
-dividers : List BigInt
-dividers =
-    maxDigitValue
-        |> Basics.toFloat
-        |> Basics.logBase 2
-        |> Basics.truncate
-        |> (+) 1
-        |> List.range 0
-        |> List.reverse
-        |> List.map ((^) 2)
-        |> List.map fromInt
-
-
-padDigits : Int -> BigInt
-padDigits =
-    repeatedly (mul (fromInt maxDigitValue)) one
-
-
-repeatedly : (a -> a) -> a -> Int -> a
-repeatedly f x n =
-    List.foldl (always f) x (List.range 1 n)
-
-
 {-| BigInt division. Produces 0 when dividing by 0 (like (//)).
 -}
 div : BigInt -> BigInt -> BigInt
@@ -730,59 +700,86 @@ mod num den =
 {-| Division and modulus
 -}
 divmod : BigInt -> BigInt -> Maybe ( BigInt, BigInt )
-divmod int1 int2 =
-    if eq int2 zero then
+divmod num den =
+    if eq den zero then
         Nothing
     else
         let
             cand_l =
-                (List.length (digits int1)) - (List.length (digits int2)) + 1
-
-            s =
-                signProduct (sign int1) (sign int2)
+                (List.length (digits num)) - (List.length (digits den)) + 1
 
             ( d, m ) =
-                divMod_ (Basics.max 0 cand_l) (abs int1) (abs int2)
+                divMod_
+                    (Basics.max 0 cand_l)
+                    (abs num)
+                    (abs den)
         in
-            Just ( mkBigInt s (magnitude d), mkBigInt (sign int1) (magnitude m) )
+            Just
+                ( mkBigInt (signProduct (sign num) (sign den)) (magnitude d)
+                , mkBigInt (sign num) (magnitude m)
+                )
 
 
-divmodDigit : BigInt -> List BigInt -> BigInt -> BigInt -> ( BigInt, BigInt )
-divmodDigit padding to_test a b =
-    case to_test of
-        [] ->
-            ( fromInt 0, a )
+divmodDigit : BigInt -> BigInt -> BigInt -> ( BigInt, BigInt )
+divmodDigit padding x y =
+    divmodDigit_ (2 ^ maxDigitBits) padding x y
 
-        x :: xs ->
-            let
-                candidate =
-                    mul (mul x b) padding
 
-                ( newdiv, newmod ) =
-                    if lte candidate a then
-                        ( mul x padding, sub a candidate )
-                    else
-                        ( fromInt 0, a )
+divmodDigit_ : Int -> BigInt -> BigInt -> BigInt -> ( BigInt, BigInt )
+divmodDigit_ to_test padding num den =
+    if to_test == 0 then
+        ( fromInt 0, num )
+    else
+        let
+            x =
+                fromInt to_test
 
-                ( restdiv, restmod ) =
-                    divmodDigit padding xs newmod b
-            in
-                ( add newdiv restdiv, restmod )
+            candidate =
+                mul (mul x den) padding
+
+            ( newdiv, newmod ) =
+                if lte candidate num then
+                    ( mul x padding, sub num candidate )
+                else
+                    ( zero, num )
+
+            ( restdiv, restmod ) =
+                divmodDigit_ (to_test // 2) padding newmod den
+        in
+            ( add newdiv restdiv, restmod )
 
 
 divMod_ : Int -> BigInt -> BigInt -> ( BigInt, BigInt )
-divMod_ n a b =
+divMod_ n num den =
     if n == 0 then
-        divmodDigit (padDigits n) dividers a b
+        divmodDigit (padDigits n) num den
     else
         let
             ( cdiv, cmod ) =
-                divmodDigit (padDigits n) dividers a b
+                divmodDigit (padDigits n) num den
 
             ( rdiv, rmod ) =
-                divMod_ (n - 1) cmod b
+                divMod_ (n - 1) cmod den
         in
             ( add cdiv rdiv, rmod )
+
+
+maxDigitBits : Int
+maxDigitBits =
+    maxDigitValue
+        |> toFloat
+        |> logBase 2
+        |> ceiling
+
+
+padDigits : Int -> BigInt
+padDigits n =
+    repeatedly (mul (fromInt maxDigitValue)) one n
+
+
+repeatedly : (a -> a) -> a -> Int -> a
+repeatedly f x n =
+    List.foldl (always f) x (List.range 1 n)
 
 
 {-| Get the sign of the bigInt
