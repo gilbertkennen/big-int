@@ -244,24 +244,19 @@ sameSizeNotNormalized (MagnitudeNotNormalised xs) (MagnitudeNotNormalised ys) =
 
 
 sameSizeRaw : List Int -> List Int -> List ( Int, Int )
-sameSizeRaw =
-    greedyZip (\x y -> ( Maybe.withDefault 0 x, Maybe.withDefault 0 y ))
-
-
-greedyZip : (Maybe a -> Maybe b -> c) -> List a -> List b -> List c
-greedyZip f xs ys =
+sameSizeRaw xs ys =
     case ( xs, ys ) of
         ( [], [] ) ->
             []
 
         ( x :: xs_, [] ) ->
-            f (Just x) Nothing :: greedyZip f xs_ []
+            ( x, 0 ) :: sameSizeRaw xs_ []
 
         ( [], y :: ys_ ) ->
-            f Nothing (Just y) :: greedyZip f [] ys_
+            ( 0, y ) :: sameSizeRaw [] ys_
 
         ( x :: xs_, y :: ys_ ) ->
-            f (Just x) (Just y) :: greedyZip f xs_ ys_
+            ( x, y ) :: sameSizeRaw xs_ ys_
 
 
 normalise : BigIntNotNormalised -> BigInt
