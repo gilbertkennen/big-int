@@ -61,8 +61,8 @@ import Basics
 import Char
 import List.Extra
 import Maybe exposing (Maybe)
-import Maybe.Extra
 import Result exposing (Result)
+import Result.Extra
 import String
 
 
@@ -214,8 +214,9 @@ fromString_ x =
     else
         List.reverse x
             |> List.Extra.greedyGroupsOf maxDigitMagnitude
-            |> List.map (List.reverse >> String.fromList >> String.toInt >> Result.toMaybe)
-            |> Maybe.Extra.combine
+            |> List.map (List.reverse >> String.fromList >> String.toInt)
+            |> Result.Extra.combine
+            |> Result.toMaybe
             |> Maybe.map (emptyZero << Magnitude)
 
 
