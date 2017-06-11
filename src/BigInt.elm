@@ -249,23 +249,19 @@ sameSizeRaw =
 
 
 greedyZip : (Maybe a -> Maybe b -> c) -> List a -> List b -> List c
-greedyZip f =
-    let
-        go acc lefts rights =
-            case ( lefts, rights ) of
-                ( [], [] ) ->
-                    List.reverse acc
+greedyZip f xs ys =
+    case ( xs, ys ) of
+        ( [], [] ) ->
+            []
 
-                ( x :: xs, [] ) ->
-                    go (f (Just x) Nothing :: acc) xs []
+        ( x :: xs_, [] ) ->
+            f (Just x) Nothing :: greedyZip f xs_ []
 
-                ( [], y :: ys ) ->
-                    go (f Nothing (Just y) :: acc) [] ys
+        ( [], y :: ys_ ) ->
+            f Nothing (Just y) :: greedyZip f [] ys_
 
-                ( x :: xs, y :: ys ) ->
-                    go (f (Just x) (Just y) :: acc) xs ys
-    in
-        go []
+        ( x :: xs_, y :: ys_ ) ->
+            f (Just x) (Just y) :: greedyZip f xs_ ys_
 
 
 normalise : BigIntNotNormalised -> BigInt
