@@ -344,11 +344,11 @@ add a b =
         (BigIntNotNormalised _ mb) =
             toPositiveSign b
 
-        (MagnitudePair p) =
+        (MagnitudePair pairs) =
             sameSizeNotNormalized ma mb
 
         added =
-            List.map (\( x, y ) -> x + y) p
+            List.map (\( x, y ) -> x + y) pairs
     in
         normalise <| BigIntNotNormalised Positive (MagnitudeNotNormalised added)
 
@@ -450,6 +450,23 @@ mulSingleDigit (Magnitude xs) d =
 compare : BigInt -> BigInt -> Order
 compare int1 int2 =
     case ( int1, int2 ) of
+        ( Pos mag1, Pos mag2 ) ->
+            sameSizeNormalized mag1 mag2
+                |> reverseMagnitudePair
+                |> compareMagnitude
+
+        ( Pos _, _ ) ->
+            GT
+
+        ( Neg mag1, Neg mag2 ) ->
+            sameSizeNormalized mag1 mag2
+                |> reverseMagnitudePair
+                |> compareMagnitude
+                |> orderNegate
+
+        ( Neg _, _ ) ->
+            LT
+
         ( Zer, Pos _ ) ->
             LT
 
@@ -458,29 +475,6 @@ compare int1 int2 =
 
         ( Zer, Neg _ ) ->
             GT
-
-        ( Pos _, Zer ) ->
-            GT
-
-        ( Pos _, Neg _ ) ->
-            GT
-
-        ( Neg _, Pos _ ) ->
-            LT
-
-        ( Neg _, Zer ) ->
-            LT
-
-        ( Pos mag1, Pos mag2 ) ->
-            sameSizeNormalized mag1 mag2
-                |> reverseMagnitudePair
-                |> compareMagnitude
-
-        ( Neg mag1, Neg mag2 ) ->
-            sameSizeNormalized mag1 mag2
-                |> reverseMagnitudePair
-                |> compareMagnitude
-                |> orderNegate
 
 
 orderNegate : Order -> Order
@@ -609,16 +603,16 @@ reverseMagnitudePair (MagnitudePair x) =
 
 
 compareMagnitude : MagnitudePairReverseOrder -> Order
-compareMagnitude (MagnitudePairReverseOrder m) =
-    case m of
+compareMagnitude (MagnitudePairReverseOrder mag) =
+    case mag of
         [] ->
             EQ
 
-        ( a, b ) :: xs ->
-            if a == b then
+        ( x, y ) :: xs ->
+            if x == y then
                 compareMagnitude (MagnitudePairReverseOrder xs)
             else
-                Basics.compare a b
+                Basics.compare x y
 
 
 zeroes : Int -> String
