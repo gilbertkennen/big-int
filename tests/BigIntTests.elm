@@ -28,6 +28,21 @@ nonZeroInteger =
     Fuzz.map2 mul singleNonZeroInteger singleNonZeroInteger
 
 
+zero : BigInt
+zero =
+    fromInt 0
+
+
+one : BigInt
+one =
+    fromInt 1
+
+
+minusOne : BigInt
+minusOne =
+    fromInt -1
+
+
 smallInt : Fuzzer Int
 smallInt =
     conditional { retries = 16, fallback = always 0, condition = (>=) 1000000 << Basics.abs } int
