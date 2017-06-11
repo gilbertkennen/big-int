@@ -280,23 +280,23 @@ normalise (BigIntNotNormalised s digits) =
             mkBigInt s (Magnitude normalisedMag)
 
 
-normaliseDigitList : List Int -> List Int
-normaliseDigitList x =
-    case x of
+normaliseMagnitude : MagnitudeNotNormalised -> Magnitude
+normaliseMagnitude (MagnitudeNotNormalised xs) =
+    Magnitude (xs |> normaliseDigitList 0 |> dropZeroes)
+
+
+normaliseDigitList : Int -> List Int -> List Int
+normaliseDigitList carry xs =
+    case xs of
         [] ->
-            []
+            [ carry ]
 
-        x1 :: xs ->
+        x :: xs_ ->
             let
-                ( c, dPrime ) =
-                    normaliseDigit x1
+                ( newCarry, x_ ) =
+                    normaliseDigit (x + carry)
             in
-                case xs of
-                    [] ->
-                        [ dPrime, c ]
-
-                    x2 :: rest ->
-                        dPrime :: normaliseDigitList (x2 + c :: rest)
+                x_ :: normaliseDigitList newCarry xs_
 
 
 normaliseDigit : Int -> ( Int, Int )
@@ -311,11 +311,6 @@ normaliseDigit x =
 dropZeroes : List Int -> List Int
 dropZeroes =
     List.Extra.dropWhileRight ((==) 0)
-
-
-normaliseMagnitude : MagnitudeNotNormalised -> Magnitude
-normaliseMagnitude (MagnitudeNotNormalised xs) =
-    Magnitude (xs |> normaliseDigitList |> dropZeroes)
 
 
 toPositiveSign : BigInt -> BigIntNotNormalised
