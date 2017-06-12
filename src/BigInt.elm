@@ -601,8 +601,6 @@ repeatedly f x n =
     List.foldl (always f) x (List.range 1 n)
 
 
-{-| Get the sign of the bigInt
--}
 sign : BigInt -> Sign
 sign bigInt =
     case bigInt of
@@ -640,7 +638,7 @@ normalise (BigIntNotNormalised s digits) =
         (Magnitude normalisedMag) =
             normaliseMagnitude digits
     in
-        if isNegativeMagnitude (normalisedMag) then
+        if isNegativeMagnitude normalisedMag then
             normalise (mkBigIntNotNormalised (signNegate s) (reverseMagnitude normalisedMag))
         else
             mkBigInt s (Magnitude normalisedMag)
@@ -704,7 +702,7 @@ isNegativeMagnitude digits =
 
 reverseMagnitude : List Int -> List Int
 reverseMagnitude =
-    List.map ((*) -1)
+    List.map Basics.negate
 
 
 {-| Magnitudes can be different sizes. This represents a pair of magnitudes with everything aligned.
@@ -715,12 +713,12 @@ type MagnitudePair
 
 sameSizeNormalized : Magnitude -> Magnitude -> MagnitudePair
 sameSizeNormalized (Magnitude xs) (Magnitude ys) =
-    MagnitudePair (sameSizeRaw xs ys)
+    MagnitudePair <| sameSizeRaw xs ys
 
 
 sameSizeNotNormalized : MagnitudeNotNormalised -> MagnitudeNotNormalised -> MagnitudePair
 sameSizeNotNormalized (MagnitudeNotNormalised xs) (MagnitudeNotNormalised ys) =
-    MagnitudePair (sameSizeRaw xs ys)
+    MagnitudePair <| sameSizeRaw xs ys
 
 
 sameSizeRaw : List Int -> List Int -> List ( Int, Int )
