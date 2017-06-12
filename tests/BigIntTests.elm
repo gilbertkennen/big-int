@@ -147,20 +147,6 @@ absTests =
         ]
 
 
-signTests : Test
-signTests =
-    describe "sign"
-        [ fuzz integer "sign x = Positive; x >0 and sign x = Negative; x < 0 and sign x = Zero; x = 0" <|
-            \x ->
-                if x == zero then
-                    Expect.equal (sign x) Zero
-                else if gt x zero then
-                    Expect.equal (sign x) Positive
-                else
-                    Expect.equal (sign x) Negative
-        ]
-
-
 stringTests : Test
 stringTests =
     describe "toString and fromString"

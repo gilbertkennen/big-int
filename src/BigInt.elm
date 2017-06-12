@@ -1,7 +1,6 @@
 module BigInt
     exposing
         ( BigInt
-        , Sign(Positive, Negative, Zero)
         , abs
         , add
         , compare
@@ -18,7 +17,6 @@ module BigInt
         , mod
         , mul
         , negate
-        , sign
         , sub
         , toString
         )
@@ -40,7 +38,7 @@ module BigInt
 
 # Sign
 
-@docs Sign, abs, negate, sign
+@docs abs, negate
 
 
 # Comparison
