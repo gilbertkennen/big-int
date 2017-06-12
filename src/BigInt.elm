@@ -2,25 +2,25 @@ module BigInt
     exposing
         ( BigInt
         , Sign(Positive, Negative, Zero)
-        , sign
+        , abs
+        , add
+        , compare
+        , div
+        , divmod
         , fromInt
         , fromString
-        , toString
-        , add
-        , sub
-        , negate
-        , mul
-        , divmod
-        , div
-        , mod
-        , abs
-        , compare
         , gt
         , gte
         , lt
         , lte
         , max
         , min
+        , mod
+        , mul
+        , negate
+        , sign
+        , sub
+        , toString
         )
 
 {-| Infinite digits integers
