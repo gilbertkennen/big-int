@@ -19,18 +19,13 @@ module BigInt
         , gte
         , lt
         , lte
-        , eq
-        , neq
         , max
         , min
         )
 
 {-| Infinite digits integers
 
-
-# The datatype
-
-@docs BigInt, Sign
+@docs BigInt
 
 
 # From/To
@@ -38,19 +33,23 @@ module BigInt
 @docs fromInt, fromString, toString
 
 
-# Common operations
+# Operations
 
-@docs add, sub, negate, mul, div, mod, divmod, abs, sign
+@docs add, sub, mul, div, mod, divmod
+
+
+# Sign
+
+@docs Sign, abs, negate, sign
 
 
 # Comparison
 
-@docs compare, gt, gte, lt, lte, eq, neq, max, min
+@docs compare, gt, gte, lt, lte, max, min
 
 -}
 
 import Basics
-import Char
 import List.Extra
 import Maybe exposing (Maybe)
 import Result exposing (Result)
@@ -415,20 +414,6 @@ orderNegate x =
             LT
 
 
-{-| Equals
--}
-eq : BigInt -> BigInt -> Bool
-eq x y =
-    compare x y == EQ
-
-
-{-| Not equals
--}
-neq : BigInt -> BigInt -> Bool
-neq x y =
-    not (eq x y)
-
-
 {-| Less than
 -}
 lt : BigInt -> BigInt -> Bool
@@ -537,7 +522,7 @@ mod num den =
 -}
 divmod : BigInt -> BigInt -> Maybe ( BigInt, BigInt )
 divmod num den =
-    if eq den zero then
+    if den == zero then
         Nothing
     else
         let

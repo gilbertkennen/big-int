@@ -20,7 +20,7 @@ integer =
 
 singleNonZeroInteger : Fuzzer BigInt
 singleNonZeroInteger =
-    conditional { retries = 16, fallback = add one, condition = not << eq zero } singleInteger
+    conditional { retries = 16, fallback = add one, condition = not << (==) zero } singleInteger
 
 
 nonZeroInteger : Fuzzer BigInt
@@ -157,7 +157,7 @@ signTests =
     describe "sign"
         [ fuzz integer "sign x = Positive; x >0 and sign x = Negative; x < 0 and sign x = Zero; x = 0" <|
             \x ->
-                if eq x zero then
+                if x == zero then
                     Expect.equal (sign x) Zero
                 else if gt x zero then
                     Expect.equal (sign x) Positive
@@ -224,7 +224,7 @@ compareTests =
     describe "compare"
         [ fuzz integer "x = x" <|
             \x ->
-                Expect.true "apparently x /= x" (eq x x)
+                Expect.true "apparently x /= x" (x == x)
         , fuzz (tuple ( integer, integer )) "x <= x + y; y >= 0" <|
             \( x, y ) ->
                 Expect.true "apparently !(x <= x + y); y >= 0"
