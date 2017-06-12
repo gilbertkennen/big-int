@@ -1,15 +1,7 @@
-# elm-integer
-Here lies a library for Elm that allows you to operate on Integers (like the Haskell or Python ones).
-These Integers have no bounds other than the memory on your device, so you should be able
-to do millions of digits without difficulty.
+# bigint
+Elm's native integer type uses raw JavaScript integers which are limited in size ([MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/MAX_SAFE_INTEGER)). Sometimes, we want more.
 
-Bear in mind the arithmetic is slower than with native Ints.
+This package provides a `BigInt` type and associated functions so that you can work with integers of unlimited size at the cost of some speed.
 
-## Usage
-Add it to your elm-package.json. Import Data.Integer.
-
-## Bugs, improvements and contributions
-If something is broken, please create a bug report in Github: https://github.com/javcasas/elm-integer/issues
-
-## Licence
-This library was made by Javier Casas. See full licence in the LICENSE file.
+# Aknowledgements
+Thank you [Javier Casas](https://github.com/javcasas) whose [elm-integer](https://github.com/javcasas/elm-integer) is the basis for this fork.

@@ -1,7 +1,7 @@
 {
     "version": "1.0.0",
     "summary": "unlimited size integers",
-    "repository": "https://github.com/gilbertkennen/big-int.git",
+    "repository": "https://github.com/gilbertkennen/bigint.git",
     "license": "MIT",
     "source-directories": [
         "src"
