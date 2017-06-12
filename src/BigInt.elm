@@ -374,17 +374,32 @@ compare int1 int2 =
 
 compareMagnitude : MagnitudePairReverseOrder -> Order
 compareMagnitude (MagnitudePairReverseOrder mag) =
-    case mag of
+    mag
+        |> findMap
+            (\( x, y ) ->
+                case Basics.compare x y of
+                    EQ ->
+                        Nothing
+
+                    other ->
+                        Just other
+            )
+        |> Maybe.withDefault EQ
+
+
+findMap : (a -> Maybe b) -> List a -> Maybe b
+findMap f xs =
+    case xs of
         [] ->
-            EQ
+            Nothing
 
-        ( x, y ) :: xs ->
-            case Basics.compare x y of
-                EQ ->
-                    compareMagnitude (MagnitudePairReverseOrder xs)
+        x :: rest ->
+            case f x of
+                Just y ->
+                    Just y
 
-                other ->
-                    other
+                Nothing ->
+                    findMap f rest
 
 
 orderNegate : Order -> Order
