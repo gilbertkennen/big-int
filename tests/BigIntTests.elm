@@ -8,19 +8,14 @@ import Test exposing (..)
 import Maybe exposing (Maybe)
 
 
-singleInteger : Fuzzer BigInt
-singleInteger =
-    Fuzz.map fromInt int
-
-
 integer : Fuzzer BigInt
 integer =
-    Fuzz.map2 mul singleInteger singleInteger
+    Fuzz.map fromInt int
 
 
 singleNonZeroInteger : Fuzzer BigInt
 singleNonZeroInteger =
-    conditional { retries = 16, fallback = add one, condition = not << (==) zero } singleInteger
+    conditional { retries = 16, fallback = add one, condition = not << (==) zero } integer
 
 
 nonZeroInteger : Fuzzer BigInt
