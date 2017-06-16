@@ -342,18 +342,14 @@ mulSingleDigit (Magnitude xs) d =
 compare : BigInt -> BigInt -> Order
 compare int1 int2 =
     case ( int1, int2 ) of
-        ( Pos mag1, Pos mag2 ) ->
-            sameSizeNormalized mag1 mag2
-                |> reverseMagnitudePair
-                |> compareMagnitude
+        ( Pos (Magnitude mag1), Pos (Magnitude mag2) ) ->
+            compareMagnitude 0 0 mag1 mag2
 
         ( Pos _, _ ) ->
             GT
 
-        ( Neg mag1, Neg mag2 ) ->
-            sameSizeNormalized mag1 mag2
-                |> reverseMagnitudePair
-                |> compareMagnitude
+        ( Neg (Magnitude mag1), Neg (Magnitude mag2) ) ->
+            compareMagnitude 0 0 mag1 mag2
                 |> orderNegate
 
         ( Neg _, _ ) ->
@@ -369,19 +365,23 @@ compare int1 int2 =
             GT
 
 
-compareMagnitude : MagnitudePairReverseOrder -> Order
-compareMagnitude (MagnitudePairReverseOrder mag) =
-    mag
-        |> findMap
-            (\( x, y ) ->
-                case Basics.compare x y of
-                    EQ ->
-                        Nothing
+compareMagnitude : Int -> Int -> List Int -> List Int -> Order
+compareMagnitude x y xs ys =
+    case ( xs, ys ) of
+        ( [], [] ) ->
+            Basics.compare x y
 
-                    other ->
-                        Just other
-            )
-        |> Maybe.withDefault EQ
+        ( [], _ ) ->
+            LT
+
+        ( _, [] ) ->
+            GT
+
+        ( x_ :: xs, y_ :: ys ) ->
+            if x_ == y_ then
+                compareMagnitude x y xs ys
+            else
+                compareMagnitude x_ y_ xs ys
 
 
 findMap : (a -> Maybe b) -> List a -> Maybe b
@@ -460,6 +460,21 @@ min x y =
         x
 
 
+{-| Converts the BigInt to a String
+-}
+toString : BigInt -> String
+toString bigInt =
+    case bigInt of
+        Zer ->
+            "0"
+
+        Pos mag ->
+            revMagnitudeToString mag
+
+        Neg mag ->
+            "-" ++ revMagnitudeToString mag
+
+
 zeroes : Int -> String
 zeroes n =
     String.repeat n "0"
@@ -478,21 +493,6 @@ revMagnitudeToString (Magnitude digits) =
 
         x :: xs ->
             String.concat <| Basics.toString x :: List.map fillZeroes xs
-
-
-{-| Converts the BigInt to a String
--}
-toString : BigInt -> String
-toString bigInt =
-    case bigInt of
-        Zer ->
-            "0"
-
-        Pos mag ->
-            revMagnitudeToString mag
-
-        Neg mag ->
-            "-" ++ revMagnitudeToString mag
 
 
 {-| BigInt division. Produces 0 when dividing by 0 (like (//)).
@@ -735,12 +735,3 @@ sameSizeRaw xs ys =
 
         ( x :: xs_, y :: ys_ ) ->
             ( x, y ) :: sameSizeRaw xs_ ys_
-
-
-type MagnitudePairReverseOrder
-    = MagnitudePairReverseOrder (List ( Int, Int ))
-
-
-reverseMagnitudePair : MagnitudePair -> MagnitudePairReverseOrder
-reverseMagnitudePair (MagnitudePair x) =
-    MagnitudePairReverseOrder <| List.reverse x
