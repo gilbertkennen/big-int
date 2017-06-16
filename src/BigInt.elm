@@ -384,21 +384,6 @@ compareMagnitude x y xs ys =
                 compareMagnitude x_ y_ xs ys
 
 
-findMap : (a -> Maybe b) -> List a -> Maybe b
-findMap f xs =
-    case xs of
-        [] ->
-            Nothing
-
-        x :: rest ->
-            case f x of
-                Just y ->
-                    Just y
-
-                Nothing ->
-                    findMap f rest
-
-
 orderNegate : Order -> Order
 orderNegate x =
     case x of
@@ -547,7 +532,7 @@ divmodDigit padding x y =
 divmodDigit_ : Int -> BigInt -> BigInt -> BigInt -> ( BigInt, BigInt )
 divmodDigit_ to_test padding num den =
     if to_test == 0 then
-        ( fromInt 0, num )
+        ( zero, num )
     else
         let
             x =
@@ -709,11 +694,6 @@ reverseMagnitude =
 -}
 type MagnitudePair
     = MagnitudePair (List ( Int, Int ))
-
-
-sameSizeNormalized : Magnitude -> Magnitude -> MagnitudePair
-sameSizeNormalized (Magnitude xs) (Magnitude ys) =
-    MagnitudePair <| sameSizeRaw xs ys
 
 
 sameSizeNotNormalized : MagnitudeNotNormalised -> MagnitudeNotNormalised -> MagnitudePair
