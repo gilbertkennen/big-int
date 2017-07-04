@@ -168,6 +168,11 @@ maxDigitValue =
     -1 + 10 ^ maxDigitMagnitude
 
 
+baseDigit : Int
+baseDigit =
+    maxDigitValue + 1
+
+
 maxDigitMagnitude : Int
 maxDigitMagnitude =
     7
@@ -593,7 +598,7 @@ maxDigitBits =
 
 padDigits : Int -> BigInt
 padDigits n =
-    repeatedly (mul (fromInt maxDigitValue)) one n
+    repeatedly (mul (fromInt baseDigit)) one n
 
 
 repeatedly : (a -> a) -> a -> Int -> a
@@ -666,10 +671,10 @@ normaliseDigitList carry xs =
 normaliseDigit : Int -> ( Int, Int )
 normaliseDigit x =
     if x < 0 then
-        normaliseDigit (x + maxDigitValue)
+        normaliseDigit (x + baseDigit)
             |> Tuple.mapFirst ((+) -1)
     else
-        ( x // maxDigitValue, rem x maxDigitValue )
+        ( x // baseDigit, rem x baseDigit )
 
 
 dropZeroes : List Int -> List Int
