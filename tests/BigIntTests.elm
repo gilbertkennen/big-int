@@ -1,6 +1,7 @@
 module BigIntTests exposing (..)
 
 import BigInt exposing (..)
+import Constants exposing (maxDigitValue)
 import Expect
 import Fuzz exposing (Fuzzer, conditional, int, tuple)
 import String
@@ -40,7 +41,7 @@ minusOne =
 
 smallInt : Fuzzer Int
 smallInt =
-    conditional { retries = 16, fallback = always 0, condition = (>=) 1000000 << Basics.abs } int
+    conditional { retries = 16, fallback = always 0, condition = (>=) maxDigitValue << Basics.abs } int
 
 
 addTests : Test
