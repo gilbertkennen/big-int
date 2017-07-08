@@ -155,19 +155,12 @@ digits bigInt =
         Pos (Magnitude ds) ->
             ds
 
-<<<<<<< HEAD
         Neg (Magnitude ds) ->
             ds
-=======
+
 baseDigit : Int
 baseDigit =
     maxDigitValue + 1
-
-
-maxDigitMagnitude : Int
-maxDigitMagnitude =
-    7
->>>>>>> e54fcfcaa1aa1a9fa2f1e830f6420b743a406172
 
 
 {-| Makes an BigInt from an Int
