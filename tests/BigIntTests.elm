@@ -44,6 +44,42 @@ smallInt =
     conditional { retries = 16, fallback = always 0, condition = (>=) maxDigitValue << Basics.abs } int
 
 
+fromTests : Test
+fromTests =
+    describe "from"
+        [ test "fromString 9999999 = fromInt 9999999" <|
+            \_ ->
+                let
+                    fromString =
+                        BigInt.fromString "9999999"
+
+                    fromInt =
+                        BigInt.fromInt 9999999
+                in
+                    Expect.equal fromString (Just fromInt)
+        , test "fromString 10000000 = fromInt 10000000" <|
+            \_ ->
+                let
+                    fromString =
+                        BigInt.fromString "10000000"
+
+                    fromInt =
+                        BigInt.fromInt 10000000
+                in
+                    Expect.equal fromString (Just fromInt)
+        , test "fromString 10000001 = fromInt 10000001" <|
+            \_ ->
+                let
+                    fromString =
+                        BigInt.fromString "10000001"
+
+                    fromInt =
+                        BigInt.fromInt 10000001
+                in
+                    Expect.equal fromString (Just fromInt)
+        ]
+
+
 addTests : Test
 addTests =
     describe "addition"
