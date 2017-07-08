@@ -158,6 +158,7 @@ digits bigInt =
         Neg (Magnitude ds) ->
             ds
 
+
 baseDigit : Int
 baseDigit =
     maxDigitValue + 1
