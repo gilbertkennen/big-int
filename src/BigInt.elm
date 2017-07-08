@@ -50,7 +50,6 @@ module BigInt
 import Basics
 import List.Extra
 import Maybe exposing (Maybe)
-import Result exposing (Result)
 import Result.Extra
 import String
 
@@ -152,11 +151,11 @@ digits bigInt =
         Zer ->
             []
 
-        Pos (Magnitude digits) ->
-            digits
+        Pos (Magnitude ds) ->
+            ds
 
-        Neg (Magnitude digits) ->
-            digits
+        Neg (Magnitude ds) ->
+            ds
 
 
 {-| Seven base-10 digits is the most we can have where x * x < the JS bigInt limit.
@@ -377,11 +376,11 @@ compareMagnitude x y xs ys =
         ( _, [] ) ->
             GT
 
-        ( x_ :: xs, y_ :: ys ) ->
+        ( x_ :: xss, y_ :: yss ) ->
             if x_ == y_ then
-                compareMagnitude x y xs ys
+                compareMagnitude x y xss yss
             else
-                compareMagnitude x_ y_ xs ys
+                compareMagnitude x_ y_ xss yss
 
 
 orderNegate : Order -> Order
@@ -460,11 +459,6 @@ toString bigInt =
             "-" ++ revMagnitudeToString mag
 
 
-zeroes : Int -> String
-zeroes n =
-    String.repeat n "0"
-
-
 fillZeroes : Int -> String
 fillZeroes =
     String.padLeft maxDigitMagnitude '0' << Basics.toString
@@ -510,7 +504,7 @@ divmod num den =
     else
         let
             cand_l =
-                (List.length (digits num)) - (List.length (digits den)) + 1
+                List.length (digits num) - List.length (digits den) + 1
 
             ( d, m ) =
                 divMod_
@@ -607,11 +601,6 @@ zero =
 one : BigInt
 one =
     fromInt 1
-
-
-minusOne : BigInt
-minusOne =
-    fromInt -1
 
 
 {-| We can perform operations more quickly if we don't worry about keeping things in final compressed form.
