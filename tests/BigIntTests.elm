@@ -3,7 +3,7 @@ module BigIntTests exposing (..)
 import BigInt exposing (..)
 import Constants exposing (maxDigitValue)
 import Expect
-import Fuzz exposing (Fuzzer, conditional, int, tuple)
+import Fuzz exposing (Fuzzer, conditional, int, intRange, tuple)
 import String
 import Test exposing (..)
 import Maybe exposing (Maybe)
@@ -16,7 +16,7 @@ integer =
 
 singleNonZeroInteger : Fuzzer BigInt
 singleNonZeroInteger =
-    conditional { retries = 16, fallback = add one, condition = not << (==) zero } integer
+    integer |> Fuzz.map (\i -> if i == zero then one else i)
 
 
 nonZeroInteger : Fuzzer BigInt
@@ -41,7 +41,7 @@ minusOne =
 
 smallInt : Fuzzer Int
 smallInt =
-    conditional { retries = 16, fallback = always 0, condition = (>=) maxDigitValue << Basics.abs } int
+    intRange (Basics.negate maxDigitValue) maxDigitValue
 
 
 fromTests : Test
