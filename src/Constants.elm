@@ -2,6 +2,7 @@ module Constants
     exposing
         ( maxDigitValue
         , maxDigitMagnitude
+        , hexDigitMagnitude
         )
 
 {-| Seven base-10 digits is the most we can have where x * x < the JS bigInt limit.
@@ -18,3 +19,9 @@ maxDigitValue =
 maxDigitMagnitude : Int
 maxDigitMagnitude =
     7
+
+
+hexDigitMagnitude : Int
+hexDigitMagnitude =
+    8
+
