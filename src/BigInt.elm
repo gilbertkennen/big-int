@@ -50,7 +50,6 @@ module BigInt
 
 import Basics
 import Constants exposing (maxDigitValue, maxDigitMagnitude, hexDigitMagnitude)
-import Debug exposing (log)
 import List.Extra
 import Maybe exposing (Maybe)
 import Result.Extra
