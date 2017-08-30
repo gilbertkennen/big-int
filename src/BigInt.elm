@@ -17,6 +17,7 @@ module BigInt
         , mod
         , mul
         , negate
+        , pow
         , sub
         , toString
         )
@@ -33,7 +34,7 @@ module BigInt
 
 # Operations
 
-@docs add, sub, mul, div, mod, divmod
+@docs add, sub, mul, div, mod, divmod, pow
 
 
 # Sign
@@ -326,6 +327,14 @@ mulSingleDigit (Magnitude xs) d =
         |> List.map ((*) d)
         |> MagnitudeNotNormalised
         |> normaliseMagnitude
+
+
+{-| Raises a BigInt to the power of Int
+-}
+pow : Int -> BigInt -> BigInt
+pow exponent base =
+    List.repeat exponent base
+        |> List.foldl mul (fromInt 1)
 
 
 {-| Compares two BigInts
