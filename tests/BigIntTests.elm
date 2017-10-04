@@ -16,7 +16,14 @@ integer =
 
 singleNonZeroInteger : Fuzzer BigInt
 singleNonZeroInteger =
-    integer |> Fuzz.map (\i -> if i == zero then one else i)
+    integer
+        |> Fuzz.map
+            (\i ->
+                if i == zero then
+                    one
+                else
+                    i
+            )
 
 
 nonZeroInteger : Fuzzer BigInt
@@ -42,6 +49,16 @@ minusOne =
 smallInt : Fuzzer Int
 smallInt =
     intRange (Basics.negate maxDigitValue) maxDigitValue
+
+
+tinyInt : Fuzzer Int
+tinyInt =
+    intRange -5 5
+
+
+tinyPositiveInt : Fuzzer Int
+tinyPositiveInt =
+    intRange 0 11
 
 
 fromTests : Test
@@ -259,4 +276,22 @@ compareTests =
             \( x, y ) ->
                 Expect.true "apparently !(x > x + y); y < 0"
                     (gt x (add x (BigInt.abs y |> BigInt.negate)))
+        ]
+
+
+isEvenTests : Test
+isEvenTests =
+    describe "eevennn)"
+        [ fuzz int "my special test..." <|
+            \x -> Expect.equal (isOdd (fromInt x)) ((x % 2) == 1)
+        ]
+
+
+powTests : Test
+powTests =
+    describe "exponentiation (pow)"
+        [ fuzz (tuple ( tinyInt, tinyPositiveInt )) "pow x y = y ^ x for small numbers" <|
+            \( base, exp ) ->
+                BigInt.toString (pow (fromInt base) (fromInt exp))
+                    |> Expect.equal (BigInt.toString (fromInt (base ^ exp)))
         ]

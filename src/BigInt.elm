@@ -487,6 +487,66 @@ mod num den =
             x
 
 
+{-| Square.
+-}
+square : BigInt -> BigInt
+square num =
+    mul num num
+
+
+{-| Parity Check - Even.
+-}
+isEven : BigInt -> Bool
+isEven num =
+    let
+        even i =
+            i % 2 == 0
+    in
+        case num of
+            Zer ->
+                True
+
+            Pos (Magnitude mag) ->
+                even (List.head mag |> Maybe.withDefault 0)
+
+            Neg (Magnitude mag) ->
+                even (List.head mag |> Maybe.withDefault 0)
+
+
+{-| Parity Check - Odd.
+-}
+isOdd : BigInt -> Bool
+isOdd num =
+    not (isEven num)
+
+
+{-| Power/Exponentiation.
+-}
+pow : BigInt -> BigInt -> BigInt
+pow base exp =
+    powHelp one base exp
+
+
+{-| Power helper, for sake of tail-recursion.
+-}
+powHelp : BigInt -> BigInt -> BigInt -> BigInt
+powHelp work num exp =
+    case exp of
+        Zer ->
+            one
+
+        Neg _ ->
+            Zer
+
+        Pos _ ->
+            if exp == one then
+                mul work num
+            else if isEven exp then
+                powHelp work (square num) (div exp two)
+            else
+                powHelp (mul num work) (square num) (div (sub exp one) two)
+
+
 {-| Division and modulus
 -}
 divmod : BigInt -> BigInt -> Maybe ( BigInt, BigInt )
@@ -593,6 +653,11 @@ zero =
 one : BigInt
 one =
     fromInt 1
+
+
+two : BigInt
+two =
+    fromInt 2
 
 
 {-| We can perform operations more quickly if we don't worry about keeping things in final compressed form.
