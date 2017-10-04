@@ -281,8 +281,16 @@ compareTests =
 
 isEvenTests : Test
 isEvenTests =
-    describe "eevennn)"
-        [ fuzz int "my special test..." <|
+    describe "isEven"
+        [ fuzz int "the `mod 2` of a number should be 0 if it is even" <|
+            \x -> Expect.equal (isEven (fromInt x)) ((x % 2) == 0)
+        ]
+
+
+isOddTests : Test
+isOddTests =
+    describe "isOdd"
+        [ fuzz int "the `mod 2` of a number should be 1 if it is odd" <|
             \x -> Expect.equal (isOdd (fromInt x)) ((x % 2) == 1)
         ]
 
