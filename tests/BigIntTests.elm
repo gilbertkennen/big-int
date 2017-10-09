@@ -174,6 +174,16 @@ mulTests =
         ]
 
 
+powTests : Test
+powTests =
+    describe "exponentiation (pow)"
+        [ fuzz (tuple ( smallInt, smallInt )) "pow x y = y ^ x for small numbers" <|
+            \( x, y ) ->
+                pow x (fromInt y)
+                    |> Expect.equal (fromInt (y ^ x))
+        ]
+
+
 divmodTests : Test
 divmodTests =
     describe "divmod"
