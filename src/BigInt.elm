@@ -19,6 +19,7 @@ module BigInt
         , negate
         , sub
         , toString
+        , toHexString
         )
 
 {-| Infinite digits integers
@@ -28,7 +29,7 @@ module BigInt
 
 # From/To
 
-@docs fromInt, fromString, toString
+@docs fromInt, fromString, toString, toHexString
 
 
 # Operations
@@ -48,12 +49,12 @@ module BigInt
 -}
 
 import Basics
-import Constants exposing (maxDigitValue, maxDigitMagnitude)
+import Constants exposing (maxDigitValue, maxDigitMagnitude, hexDigitMagnitude)
 import List.Extra
 import Maybe exposing (Maybe)
 import Result.Extra
 import String
-
+import Hex
 
 {-| The sign of the bigInt
 -}
@@ -62,6 +63,8 @@ type Sign
     | Negative
     | Zero
 
+eightHexDigits : BigInt
+eightHexDigits = mul (fromInt 2) (fromInt 0x80000000)
 
 signProduct : Sign -> Sign -> Sign
 signProduct x y =
@@ -180,6 +183,10 @@ fromString x =
         [] ->
             Just zero
 
+        '-' :: '0' :: 'x' :: xs ->
+            fromHexString_ xs
+                |> Maybe.map (mul (fromInt -1))
+
         '-' :: xs ->
             fromString_ xs
                 |> Maybe.map (mkBigInt Negative)
@@ -187,6 +194,9 @@ fromString x =
         '+' :: xs ->
             fromString_ xs
                 |> Maybe.map (mkBigInt Positive)
+
+        '0' :: 'x' :: xs ->
+            fromHexString_ xs
 
         xs ->
             fromString_ xs
@@ -205,7 +215,18 @@ fromString_ x =
         |> Result.toMaybe
         |> Maybe.map (emptyZero << Magnitude)
 
-
+fromHexString_ : List Char -> Maybe BigInt
+fromHexString_ x =
+    List.reverse x
+        |> List.Extra.greedyGroupsOf hexDigitMagnitude
+        |> List.map (List.reverse >> String.fromList >> Hex.fromString)
+        |> Result.Extra.combine
+        |> Result.toMaybe
+        |> Maybe.map
+           (List.reverse >>
+                List.foldl (\e s -> mul s eightHexDigits |> add (fromInt e)) zero
+           )
+           
 emptyZero : Magnitude -> Magnitude
 emptyZero (Magnitude xs) =
     case List.Extra.dropWhile ((==) 0) xs of
@@ -450,7 +471,7 @@ toString bigInt =
         Neg mag ->
             "-" ++ revMagnitudeToString mag
 
-
+                
 fillZeroes : Int -> String
 fillZeroes =
     String.padLeft maxDigitMagnitude '0' << Basics.toString
@@ -466,6 +487,48 @@ revMagnitudeToString (Magnitude digits) =
             String.concat <| Basics.toString x :: List.map fillZeroes xs
 
 
+{-| Print the number as a hex string.
+-}
+toHexString : BigInt -> String
+toHexString bigInt =
+    case bigInt of
+        Zer ->
+            "0"
+
+        Pos mag ->
+            if mag == Magnitude [] then
+                "0"
+            else
+                hexMagnitudeToString (Pos mag)
+
+        Neg mag ->
+            "-" ++ (toHexString (mul (fromInt -1) bigInt))
+
+-- Shortcut conversion to int for hex handling
+bigIntToInt_ : BigInt -> Int
+bigIntToInt_ bigInt =
+    case bigInt of
+        Zer -> 0
+
+        Pos (Magnitude [a]) -> a
+               
+        Pos (Magnitude [a,b]) -> b * (10^maxDigitMagnitude) + a
+
+        _ -> Debug.crash "No suitable shortcut conversion in hexMagnitudeToString"
+                
+hexMagnitudeToString : BigInt -> String
+hexMagnitudeToString bigInt =
+    case divmod bigInt eightHexDigits of
+        Nothing ->
+            Debug.crash "Failure converting to hex string."
+
+        Just (d,r) ->
+            let rString = Hex.toString (bigIntToInt_ r) in
+            if d == (fromInt 0) then
+                rString
+            else
+                (hexMagnitudeToString d) ++ (String.padLeft 8 '0' rString)
+    
 {-| BigInt division. Produces 0 when dividing by 0 (like (//)).
 -}
 div : BigInt -> BigInt -> BigInt

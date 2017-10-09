@@ -4,6 +4,8 @@ import BigInt exposing (..)
 import Constants exposing (maxDigitValue)
 import Expect
 import Fuzz exposing (Fuzzer, conditional, int, intRange, tuple)
+import Hex
+import Random
 import String
 import Test exposing (..)
 import Maybe exposing (Maybe)
@@ -13,6 +15,9 @@ integer : Fuzzer BigInt
 integer =
     Fuzz.map fromInt int
 
+smallPositiveIntegers : Fuzzer Int
+smallPositiveIntegers =
+    intRange 0 Random.maxInt
 
 singleNonZeroInteger : Fuzzer BigInt
 singleNonZeroInteger =
@@ -75,6 +80,19 @@ fromTests =
 
                     fromInt =
                         BigInt.fromInt 10000001
+                in
+                    Expect.equal fromString (Just fromInt)
+        , test "fromString 0x2386f26fc10000 = mul (fromInt 100000000) (fromInt 100000000)" <|
+            \_ ->
+                let
+                    fromString =
+                        BigInt.fromString "0x2386f26fc10000"
+
+                    midLargeInt =
+                        BigInt.fromInt 100000000
+                            
+                    fromInt =
+                        BigInt.mul midLargeInt midLargeInt
                 in
                     Expect.equal fromString (Just fromInt)
         ]
@@ -206,6 +224,25 @@ stringTests =
                     String.cons '+' y
                         |> fromString
                         |> Expect.equal (fromString y)
+        , test "Basic toHexString" <|
+            \_ ->
+                let
+                    fromString =
+                        BigInt.fromString "0x2386f26fc10000"
+
+                    midLargeInt =
+                        BigInt.fromInt 100000000
+                            
+                    fromInt =
+                        mul midLargeInt midLargeInt
+                in
+                    Expect.equal
+                        (Maybe.map toHexString fromString)
+                        (Just "2386f26fc10000")
+        , fuzz smallPositiveIntegers "Same results as rtfeldman/hex" <|
+            \x ->
+                BigInt.toHexString (fromInt x)
+                    |> Expect.equal (Hex.toString x)
         ]
 
 
