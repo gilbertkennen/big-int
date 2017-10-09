@@ -15,13 +15,22 @@ integer : Fuzzer BigInt
 integer =
     Fuzz.map fromInt int
 
+
 smallPositiveIntegers : Fuzzer Int
 smallPositiveIntegers =
     intRange 0 Random.maxInt
 
+
 singleNonZeroInteger : Fuzzer BigInt
 singleNonZeroInteger =
-    integer |> Fuzz.map (\i -> if i == zero then one else i)
+    integer
+        |> Fuzz.map
+            (\i ->
+                if i == zero then
+                    one
+                else
+                    i
+            )
 
 
 nonZeroInteger : Fuzzer BigInt
@@ -47,6 +56,16 @@ minusOne =
 smallInt : Fuzzer Int
 smallInt =
     intRange (Basics.negate maxDigitValue) maxDigitValue
+
+
+tinyInt : Fuzzer Int
+tinyInt =
+    intRange -5 5
+
+
+tinyPositiveInt : Fuzzer Int
+tinyPositiveInt =
+    intRange 0 11
 
 
 fromTests : Test
@@ -90,7 +109,7 @@ fromTests =
 
                     midLargeInt =
                         BigInt.fromInt 100000000
-                            
+
                     fromInt =
                         BigInt.mul midLargeInt midLargeInt
                 in
@@ -232,7 +251,7 @@ stringTests =
 
                     midLargeInt =
                         BigInt.fromInt 100000000
-                            
+
                     fromInt =
                         mul midLargeInt midLargeInt
                 in
@@ -296,4 +315,30 @@ compareTests =
             \( x, y ) ->
                 Expect.true "apparently !(x > x + y); y < 0"
                     (gt x (add x (BigInt.abs y |> BigInt.negate)))
+        ]
+
+
+isEvenTests : Test
+isEvenTests =
+    describe "isEven"
+        [ fuzz int "the `mod 2` of a number should be 0 if it is even" <|
+            \x -> Expect.equal (isEven (fromInt x)) ((x % 2) == 0)
+        ]
+
+
+isOddTests : Test
+isOddTests =
+    describe "isOdd"
+        [ fuzz int "the `mod 2` of a number should be 1 if it is odd" <|
+            \x -> Expect.equal (isOdd (fromInt x)) ((x % 2) == 1)
+        ]
+
+
+powTests : Test
+powTests =
+    describe "exponentiation (pow)"
+        [ fuzz (tuple ( tinyInt, tinyPositiveInt )) "pow x y = y ^ x for small numbers" <|
+            \( base, exp ) ->
+                BigInt.toString (pow (fromInt base) (fromInt exp))
+                    |> Expect.equal (BigInt.toString (fromInt (base ^ exp)))
         ]

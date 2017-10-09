@@ -10,6 +10,8 @@ module BigInt
         , fromString
         , gt
         , gte
+        , isEven
+        , isOdd
         , lt
         , lte
         , max
@@ -17,6 +19,7 @@ module BigInt
         , mod
         , mul
         , negate
+        , pow
         , sub
         , toString
         , toHexString
@@ -34,7 +37,7 @@ module BigInt
 
 # Operations
 
-@docs add, sub, mul, div, mod, divmod
+@docs add, sub, mul, div, mod, divmod, pow
 
 
 # Sign
@@ -46,6 +49,11 @@ module BigInt
 
 @docs compare, gt, gte, lt, lte, max, min
 
+
+# Misc
+
+@docs isEven, isOdd
+
 -}
 
 import Basics
@@ -56,6 +64,7 @@ import Result.Extra
 import String
 import Hex
 
+
 {-| The sign of the bigInt
 -}
 type Sign
@@ -63,8 +72,11 @@ type Sign
     | Negative
     | Zero
 
+
 eightHexDigits : BigInt
-eightHexDigits = mul (fromInt 2) (fromInt 0x80000000)
+eightHexDigits =
+    mul (fromInt 2) (fromInt 0x80000000)
+
 
 signProduct : Sign -> Sign -> Sign
 signProduct x y =
@@ -215,6 +227,7 @@ fromString_ x =
         |> Result.toMaybe
         |> Maybe.map (emptyZero << Magnitude)
 
+
 fromHexString_ : List Char -> Maybe BigInt
 fromHexString_ x =
     List.reverse x
@@ -223,10 +236,11 @@ fromHexString_ x =
         |> Result.Extra.combine
         |> Result.toMaybe
         |> Maybe.map
-           (List.reverse >>
-                List.foldl (\e s -> mul s eightHexDigits |> add (fromInt e)) zero
-           )
-           
+            (List.reverse
+                >> List.foldl (\e s -> mul s eightHexDigits |> add (fromInt e)) zero
+            )
+
+
 emptyZero : Magnitude -> Magnitude
 emptyZero (Magnitude xs) =
     case List.Extra.dropWhile ((==) 0) xs of
@@ -471,7 +485,7 @@ toString bigInt =
         Neg mag ->
             "-" ++ revMagnitudeToString mag
 
-                
+
 fillZeroes : Int -> String
 fillZeroes =
     String.padLeft maxDigitMagnitude '0' << Basics.toString
@@ -504,31 +518,44 @@ toHexString bigInt =
         Neg mag ->
             "-" ++ (toHexString (mul (fromInt -1) bigInt))
 
+
+
 -- Shortcut conversion to int for hex handling
+
+
 bigIntToInt_ : BigInt -> Int
 bigIntToInt_ bigInt =
     case bigInt of
-        Zer -> 0
+        Zer ->
+            0
 
-        Pos (Magnitude [a]) -> a
-               
-        Pos (Magnitude [a,b]) -> b * (10^maxDigitMagnitude) + a
+        Pos (Magnitude [ a ]) ->
+            a
 
-        _ -> Debug.crash "No suitable shortcut conversion in hexMagnitudeToString"
-                
+        Pos (Magnitude [ a, b ]) ->
+            b * (10 ^ maxDigitMagnitude) + a
+
+        _ ->
+            Debug.crash "No suitable shortcut conversion in hexMagnitudeToString"
+
+
 hexMagnitudeToString : BigInt -> String
 hexMagnitudeToString bigInt =
     case divmod bigInt eightHexDigits of
         Nothing ->
             Debug.crash "Failure converting to hex string."
 
-        Just (d,r) ->
-            let rString = Hex.toString (bigIntToInt_ r) in
-            if d == (fromInt 0) then
-                rString
-            else
-                (hexMagnitudeToString d) ++ (String.padLeft 8 '0' rString)
-    
+        Just ( d, r ) ->
+            let
+                rString =
+                    Hex.toString (bigIntToInt_ r)
+            in
+                if d == (fromInt 0) then
+                    rString
+                else
+                    (hexMagnitudeToString d) ++ (String.padLeft 8 '0' rString)
+
+
 {-| BigInt division. Produces 0 when dividing by 0 (like (//)).
 -}
 div : BigInt -> BigInt -> BigInt
@@ -548,6 +575,66 @@ mod num den =
 
         Just x ->
             x
+
+
+{-| Square.
+-}
+square : BigInt -> BigInt
+square num =
+    mul num num
+
+
+{-| Parity Check - Even.
+-}
+isEven : BigInt -> Bool
+isEven num =
+    let
+        even i =
+            i % 2 == 0
+    in
+        case num of
+            Zer ->
+                True
+
+            Pos (Magnitude mag) ->
+                even (List.head mag |> Maybe.withDefault 0)
+
+            Neg (Magnitude mag) ->
+                even (List.head mag |> Maybe.withDefault 0)
+
+
+{-| Parity Check - Odd.
+-}
+isOdd : BigInt -> Bool
+isOdd num =
+    not (isEven num)
+
+
+{-| Power/Exponentiation.
+-}
+pow : BigInt -> BigInt -> BigInt
+pow base exp =
+    powHelp one base exp
+
+
+{-| Power helper, for sake of tail-recursion.
+-}
+powHelp : BigInt -> BigInt -> BigInt -> BigInt
+powHelp work num exp =
+    case exp of
+        Zer ->
+            one
+
+        Neg _ ->
+            Zer
+
+        Pos _ ->
+            if exp == one then
+                mul work num
+            else if isEven exp then
+                powHelp work (square num) (div exp two)
+            else
+                powHelp (mul num work) (square num) (div (sub exp one) two)
 
 
 {-| Division and modulus
@@ -656,6 +743,11 @@ zero =
 one : BigInt
 one =
     fromInt 1
+
+
+two : BigInt
+two =
+    fromInt 2
 
 
 {-| We can perform operations more quickly if we don't worry about keeping things in final compressed form.
