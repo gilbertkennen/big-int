@@ -1,5 +1,5 @@
 {
-    "version": "2.1.0",
+    "version": "1.1.0",
     "summary": "unlimited size integers",
     "repository": "https://github.com/gilbertkennen/bigint.git",
     "license": "MIT",
