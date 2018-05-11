@@ -1,10 +1,7 @@
 # bigint
-Elm's native integer type uses raw JavaScript integers which are limited in size ([MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/MAX_SAFE_INTEGER)). Sometimes, we want more.
 
-This package provides a `BigInt` type and associated functions so that you can work with integers of unlimited size at the cost of some speed. Benchmarks included.
-
-## Contributions
-are very welcome!
+## Maintenance Status
+I have been unable to maintain this for some time and a fork has emerged which might work better for you. Please use [hickscorp/elm-bigint](http://package.elm-lang.org/packages/hickscorp/elm-bigint/latest) instead.
 
 ## Aknowledgements
 Thank you [Javier Casas](https://github.com/javcasas) whose [elm-integer](https://github.com/javcasas/elm-integer) is the basis for this fork.
