@@ -114,6 +114,22 @@ fromTests =
                         BigInt.mul midLargeInt midLargeInt
                 in
                     Expect.equal fromString (Just fromInt)
+        , test "fromString 0x0 = fromInt 0" <|
+            \_ -> Expect.equal (BigInt.fromString "0x0") (Just <| BigInt.fromInt 0)
+        , test "fromString -0x0 = fromInt 0" <|
+            \_ -> Expect.equal (BigInt.fromString "-0x0") (Just <| BigInt.fromInt 0)
+        , test "fromString 0 = fromInt 0" <|
+            \_ -> Expect.equal (BigInt.fromString "0") (Just <| BigInt.fromInt 0)
+        , test "fromString \"\" = Nothing" <|
+            \_ -> Expect.equal (BigInt.fromString "") Nothing
+        , test "fromString + = Nothing" <|
+            \_ -> Expect.equal (BigInt.fromString "+") Nothing
+        , test "fromString - = Nothing" <|
+            \_ -> Expect.equal (BigInt.fromString "-") Nothing
+        , test "fromString 0x = Nothing" <|
+            \_ -> Expect.equal (BigInt.fromString "0x") Nothing
+        , test "fromString -0x = Nothing" <|
+            \_ -> Expect.equal (BigInt.fromString "-0x") Nothing
         ]
 
 
